@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TruckSim Playthrough</title>
+<!-- The 3D playthrough of one run: MapLibre (the map, OpenFreeMap's tiles) under deck.gl (roads, weather, closures,
+     Kenney's trucks), a camera director, and the agent's turns as an overlay. Served from a site folder (replay_page.py):
+     cinema.html?run=<id> reads runs/<id>.json, road_shapes.json and models/. ?record=1 is the video renderer's mode
+     (scripts/render_cinema.py): no controls, and window.cinema.seek(t) draws the frame at t seconds. -->
+<link rel="stylesheet" href="vendor/maplibre-gl-6.14.0/maplibre-gl.css">
+<style>
+:root {
+  --panel: rgba(14, 18, 24, .78); --panel-line: rgba(255, 255, 255, .08); --fg: #eef1f5; --muted: #9ba4b0; --faint: #66707c;
+  --accent: #f2a23a; --ok: #63d69a; --warn: #f2b84b; --red: #ff6155; --ice: #a9d6ff;
+  --seat-A: #6692d8; --seat-B: #ff8744; --seat-C: #4cbe8c; --s: 1;
+  --sans: -apple-system, "SF Pro Text", "Helvetica Neue", Inter, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+html, body { margin: 0; height: 100%; overflow: hidden; background: #07090c; color: var(--fg); font-family: var(--sans); }
+#map { position: fixed; inset: 0; }
+.maplibregl-ctrl-attrib { font-size: 10px; background: rgba(10, 12, 16, .6) !important; color: #8a939e; }
+.maplibregl-ctrl-attrib a { color: #a9b3be; }
+#labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
+#hud { position: fixed; left: 0; top: 0; width: 1920px; transform-origin: 0 0; pointer-events: none; z-index: 3; }
+#hud * { box-sizing: border-box; }
+.panel { position: absolute; background: var(--panel); border: 1px solid var(--panel-line); border-radius: 12px; padding: 14px 16px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.ph { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.ph b { color: var(--fg); font-weight: 600; }
+.ph .r { letter-spacing: .02em; text-transform: none; color: var(--faint); font-size: 12px; }
+.badge { display: inline-block; font-size: 11.5px; font-weight: 700; letter-spacing: .1em; color: #1a1206; background: var(--accent); border-radius: 999px; padding: 3px 10px; }
+.badge.out { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+.mono { font-family: var(--mono); }
+
+#tl { position: absolute; left: 36px; top: 30px; width: 540px; }
+#tl::before { content: ""; position: absolute; left: -36px; top: -30px; width: 660px; height: 380px; z-index: -1;
+  background: radial-gradient(ellipse at 20% 30%, rgba(7,9,12,.88), rgba(7,9,12,.6) 55%, rgba(7,9,12,0) 75%); }
+#tl .kick { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+#tl h1 { margin: 12px 0 6px; font-size: 27px; line-height: 1.15; font-weight: 700; letter-spacing: -.01em; text-shadow: 0 2px 16px rgba(0,0,0,.6); }
+#tl .who { font-size: 15px; font-weight: 600; color: var(--accent); }
+#tl .desc { margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: #c8cfd8; text-shadow: 0 1px 8px rgba(0,0,0,.8); max-width: 520px; }
+#tl .clockrow { display: flex; gap: 14px; align-items: baseline; margin-top: 14px; }
+#tl .clock { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#tl .date { font-size: 15px; color: var(--muted); }
+#tl .chip { font-size: 12px; color: var(--muted); background: rgba(255,255,255,.08); border-radius: 6px; padding: 3px 8px; }
+#mode { position: relative; margin-top: 14px; width: 470px; }
+#mode .row { display: flex; gap: 10px; align-items: center; }
+#mode .model { font-size: 16px; font-weight: 700; color: var(--accent); }
+#mode .seatline { font-size: 12.5px; color: var(--faint); margin-top: 6px; }
+#mode .m { display: flex; gap: 12px; align-items: baseline; margin-top: 12px; }
+#mode .m b { font-size: 21px; letter-spacing: .04em; }
+#mode .m span { font-size: 14px; color: #c8cfd8; }
+
+#cap { position: absolute; left: 50%; top: 30px; width: 720px; margin-left: -330px; text-align: center; padding: 14px 22px 16px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(10,13,18,.72), rgba(10,13,18,.5)); border: 1px solid rgba(255,255,255,.06); }
+#cap h2 { margin: 0; font-size: 25px; font-weight: 700; letter-spacing: -.01em; }
+#cap p { margin: 8px 0 0; font-size: 15px; line-height: 1.45; color: #d3d9e1; }
+#cap p q { font-style: italic; color: #f3e7d4; }
+#cap .src { display: block; margin-top: 6px; font-size: 12px; color: var(--faint); font-style: normal; letter-spacing: .04em; }
+
+#fleet { right: 36px; top: 30px; width: 470px; }
+.fr { display: grid; grid-template-columns: 12px 44px 62px 1fr 168px; gap: 8px; align-items: center; height: 25px; font-size: 13px; }
+.fr .dot { width: 10px; height: 10px; border-radius: 50%; }
+.fr .id { font-weight: 700; font-family: var(--mono); font-size: 12.5px; }
+.fr .cls { color: var(--faint); font-size: 11.5px; }
+.fr .drv { color: #c6cdd6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr .st { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; font-size: 12px; }
+#feed { right: 36px; top: 356px; width: 470px; height: 352px; overflow: hidden; }
+#feed .sub { font-size: 12px; color: var(--faint); margin: -4px 0 10px; }
+.fl { display: grid; grid-template-columns: 30px 1fr; gap: 6px; margin-bottom: 7px; }
+.fl .n { color: var(--faint); font-family: var(--mono); font-size: 11.5px; padding-top: 1px; }
+.fl .fn { font-family: var(--mono); font-size: 13px; color: #e7ebf0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fl.act .fn { color: var(--accent); }
+.fl .res { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fl.err .res { color: var(--red); }
+.fl.say .fn { font-family: var(--sans); font-style: italic; color: #f3e7d4; white-space: normal; }
+
+#pnl { left: 36px; bottom: 44px; width: 400px; }
+#pnl .big { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.05; }
+#pnl .bigsub { font-size: 13px; color: var(--muted); margin: 2px 0 10px; }
+.kv { display: flex; justify-content: space-between; font-size: 14px; height: 24px; align-items: center; }
+.kv span { color: var(--muted); } .kv b { font-weight: 600; font-variant-numeric: tabular-nums; }
+#race { left: 470px; bottom: 44px; width: 640px; height: 214px; }
+#race svg { display: block; }
+#wxp { right: 36px; bottom: 44px; width: 470px; min-height: 150px; }
+#wxp .big { font-size: 21px; font-weight: 700; }
+#wxp .sub { font-size: 13px; color: var(--muted); margin: 3px 0 10px; }
+.cl { display: flex; gap: 8px; font-size: 13px; height: 23px; align-items: center; white-space: nowrap; overflow: hidden; }
+.cl .tag { color: #fff; background: var(--red); border-radius: 4px; font-size: 10.5px; font-weight: 700; padding: 1px 6px; letter-spacing: .05em; }
+.cl .when { color: var(--faint); margin-left: auto; }
+
+#tbar { position: absolute; left: 36px; right: 36px; bottom: 16px; height: 18px; }
+#tbar .track { position: absolute; left: 0; right: 0; top: 9px; height: 3px; background: rgba(255,255,255,.12); border-radius: 2px; }
+#tbar .fill { position: absolute; left: 0; top: 9px; height: 3px; background: var(--accent); border-radius: 2px; }
+#tbar .mk { position: absolute; top: 5px; width: 2px; height: 11px; border-radius: 1px; }
+#tbar .day { position: absolute; top: -6px; font-size: 11px; color: var(--faint); transform: translateX(-50%); }
+
+.veil { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+#intro { background: radial-gradient(ellipse at center, rgba(7,9,12,.55), rgba(7,9,12,.9)); }
+#intro .k { font-size: 15px; letter-spacing: .3em; color: var(--accent); font-weight: 700; }
+#intro h1 { font-size: 56px; margin: 18px 0 10px; max-width: 1300px; line-height: 1.1; letter-spacing: -.02em; }
+#intro p { font-size: 20px; color: #c8cfd8; margin: 0; max-width: 1100px; line-height: 1.45; }
+#intro .facts { display: flex; gap: 18px; margin-top: 34px; }
+#intro .facts div { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 12px; padding: 14px 22px; font-size: 15px; color: var(--muted); }
+#intro .facts b { display: block; font-size: 30px; color: var(--fg); margin-bottom: 2px; }
+#outro { background: rgba(7,9,12,.86); }
+#outro .k { font-size: 14px; letter-spacing: .3em; color: var(--accent); font-weight: 700; }
+#quotes { max-width: 1200px; }
+#quotes blockquote { margin: 26px 0 0; font-size: 25px; line-height: 1.45; font-style: italic; color: #f3e7d4; }
+#quotes cite { display: block; margin-top: 8px; font-size: 14px; font-style: normal; color: var(--faint); letter-spacing: .05em; }
+#result h1 { font-size: 50px; margin: 14px 0 4px; letter-spacing: -.02em; }
+#result .sub { font-size: 18px; color: var(--muted); }
+#result .ruler { position: relative; width: 1000px; height: 120px; margin: 40px auto 6px; }
+#result .ruler .ln { position: absolute; left: 0; right: 0; top: 60px; height: 3px; background: rgba(255,255,255,.15); }
+#result .ruler .pt { position: absolute; top: 0; height: 120px; }
+#result .ruler .pt i { position: absolute; top: 52px; left: -9px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #07090c; }
+#result .ruler .pt .lb { position: absolute; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+#result .ruler .pt .lb.below { top: 78px; } #result .ruler .pt .lb.above { bottom: 74px; }
+#result .ruler .pt b { display: block; font-size: 16px; }
+#result .ruler .pt span { font-size: 13px; color: var(--muted); }
+#result table { margin: 22px auto 0; border-collapse: collapse; font-size: 16px; text-align: left; }
+#result td { padding: 5px 16px; } #result td:first-child { color: var(--muted); text-align: right; }
+
+.lab { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; font-weight: 700; border-radius: 999px; padding: 3px 9px;
+  font-size: calc(13px * var(--s)); box-shadow: 0 2px 10px rgba(0,0,0,.5); }
+.lab.money { background: rgba(10,14,18,.86); border: 1.5px solid currentColor; }
+.lab.closed { background: var(--red); color: #fff; letter-spacing: .04em; font-size: calc(12px * var(--s)); border-radius: 5px; }
+.lab.ev { background: rgba(10,14,18,.9); color: var(--fg); border: 1.5px solid var(--warn); }
+
+#controls { position: fixed; left: 50%; bottom: 46px; transform: translateX(-50%); z-index: 4; display: flex; gap: 8px; align-items: center;
+  background: rgba(14,18,24,.88); border: 1px solid var(--panel-line); border-radius: 10px; padding: 7px 10px; font-size: 13px; }
+#controls[hidden] { display: none; }
+#controls button, #controls select { background: rgba(255,255,255,.08); color: var(--fg); border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 5px 10px; font: inherit; cursor: pointer; }
+#controls input[type=range] { width: 360px; accent-color: var(--accent); }
+#controls a { color: var(--muted); }
+#err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 9; background: #07090c; color: var(--red); font: 15px var(--mono); padding: 40px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="labels"></div>
+<div id="hud">
+  <div id="tl">
+    <div class="kick"><span class="badge">AGENT-DRIVEN</span><span>trucking week · TruckSimEnv</span></div>
+    <h1 id="title"></h1>
+    <div class="who" id="who"></div>
+    <p class="desc" id="desc"></p>
+    <div class="clockrow"><span class="clock" id="clock"></span><span class="date" id="date"></span><span class="chip" id="turnchip"></span></div>
+    <div class="panel" id="mode">
+      <div class="row"><span class="badge out">AGENT-DRIVEN</span><span class="mono model" id="modelname"></span></div>
+      <div class="seatline mono" id="seatline"></div>
+      <div class="m"><b id="modename"></b><span id="modetext"></span></div>
+    </div>
+  </div>
+  <div id="cap"><h2 id="capt"></h2><p id="capx"></p></div>
+  <div class="panel" id="fleet"><div class="ph"><span>Fleet · <b id="fleethub"></b></span><span class="r" id="fleetnote"></span></div><div id="fleetrows"></div></div>
+  <div class="panel" id="feed"><div class="ph"><span>Agent feed</span><span class="r" id="feednote"></span></div>
+    <div class="sub">its tool calls this turn · amber calls change the world</div><div id="feedrows"></div></div>
+  <div class="panel" id="pnl"><div class="ph"><span>Company <b id="pnlseat"></b></span><span class="r">this week so far</span></div>
+    <div class="big" id="profit"></div><div class="bigsub">profit: revenue earned minus every cost paid</div><div id="pnlrows"></div></div>
+  <div class="panel" id="race"><div class="ph"><span>Profit race</span><span class="r">same week, same freight, three companies</span></div><svg id="racesvg" width="606" height="160"></svg></div>
+  <div class="panel" id="wxp"><div class="ph"><span>Weather &amp; roads</span><span class="r" id="wxnote"></span></div><div id="wxbody"></div></div>
+  <div id="tbar"><div class="track"></div><div class="fill" id="tfill"></div><div id="tmarks"></div></div>
+  <div class="veil" id="intro"></div>
+  <div class="veil" id="outro"></div>
+</div>
+<div id="controls" hidden>
+  <button id="play">❚❚</button>
+  <input type="range" id="seek" min="0" max="1000" value="0">
+  <span class="mono" id="tlabel"></span>
+  <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+  <select id="cammode"><option value="director">camera: director</option><option value="free">camera: free</option></select>
+  <select id="runpick"></select>
+  <a href="index.html">2D viewer</a>
+</div>
+<div id="err"></div>
+<script src="vendor/deck.gl-9.4.0.min.js"></script>
+<script type="importmap">{ "imports": { "@deck.gl/core": "./vendor/deck.gl-core-shim.mjs" } }</script>
+<script type="module">
+import * as maplibregl from "./vendor/maplibre-gl-6.14.0/maplibre-gl.mjs";
+import { MapLibreOverlay } from "./vendor/deck.gl-maplibre-9.4.0/index.js";
+import { D2R, M_PER_DEG, clamp, lerp, smooth, smoother, lerpAngle, hash, esc, money, plural, DAYS, clockOf, offset, metersBetween, bearingOf, step, getJSON, SEAT_RGB, unitMeters, dayness, runModel } from "./runmodel.mjs";
+
+const D = window.deck;
+const Q = new URLSearchParams(location.search);
+const RECORD = Q.has("record");
+const fail = e => { const el = document.getElementById("err"); el.style.display = "flex"; el.textContent = "The playthrough could not start:\n" + (e && e.stack || e); window.cinema = { error: String(e && e.stack || e) }; };
+window.addEventListener("error", ev => fail(ev.error || ev.message));
+window.addEventListener("unhandledrejection", ev => fail(ev.reason));
+
+const $ = id => document.getElementById(id);
+const seatCss = s => `var(--seat-${s})`;
+
+// ---- the run -------------------------------------------------------------------------------------------------------
+const SITE = await getJSON("site.json");
+const RUNS = SITE.runs || [];
+const RUN_ID = Q.get("run") || (RUNS[0] && RUNS[0].id);
+if (!RUN_ID) throw new Error("no run: open cinema.html?run=<id> (site.json lists none)");
+const [R, SHAPES] = await Promise.all([getJSON(`runs/${encodeURIComponent(RUN_ID)}.json`), getJSON("road_shapes.json")]);
+const SUMMARY = RUNS.find(r => r.id === RUN_ID) || {};
+const { SEAT, AGENT, MODEL, SEATS, WEEK, TT, NT, TURN, MONDAY, dateOf, shortDate, CITY, HUB, HUB_NAME, TRUCK, UNIT_INDEX, DRIVER, modelOf, UNIT_LABEL, EDGE, ROADS, edgeOf, along, stretch, LOT, slot, SNAP, snapAt, logical, world, pose, TRIPS, WX, WX_CITY, WX_LIST, WX_KIND, WX_RGB, weatherAt, CLOSURES, closuresAt, REVENUE, BOOKS, booksAt, REFS, SCORE, callLine, FEED, firstSentences, KEY, LOADS, DISPATCHES, truckOfLoad, MINE, KEY_EVENTS, crewNames, route, eventCaption, truckBlurb } = runModel(R, SHAPES, { id: RUN_ID, model: SUMMARY.model, lane: S => 0.9 * S });
+
+// ---- the timeline: intro, then each turn's planning pause and its six hours, then the outro ------------------------
+const INTRO = 8, OUTRO = 17, RUN = 4.2, SLOW = 2.6, FLY = 2.0;
+const slowTicks = new Set(); KEY_EVENTS.forEach(e => { for (let k = -2; k <= 3; k++) slowTicks.add(Math.floor(e.t) + k); });
+const SEG = [{ kind: "intro", t0: 0, t1: INTRO, tick: 0 }];
+const TICK_T = new Float64Array(WEEK + 1);
+let T0 = INTRO;
+for (let k = 0; k < NT; k++) {
+  const n = (FEED[k] || []).length, P = clamp(1.3 + 0.12 * n, 1.8, 3.4);
+  SEG.push({ kind: "plan", turn: k, t0: T0, t1: T0 + P, tick: k * TT }); T0 += P;
+  const cum = [0]; for (let i = 0; i < TT; i++) cum.push(cum[i] + RUN / TT * (slowTicks.has(k * TT + i) ? SLOW : 1));
+  for (let i = 0; i < TT; i++) TICK_T[k * TT + i] = T0 + cum[i];
+  SEG.push({ kind: "run", turn: k, t0: T0, t1: T0 + cum[TT], tick0: k * TT, cum }); T0 += cum[TT];
+}
+TICK_T[WEEK] = T0;
+SEG.push({ kind: "outro", t0: T0, t1: T0 + OUTRO, tick: WEEK });
+const DURATION = T0 + OUTRO;
+SEG.forEach((s, i) => { s.i = i; });
+function segAt(T) { let lo = 0, hi = SEG.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (SEG[m].t0 <= T) lo = m; else hi = m - 1; } return SEG[lo]; }
+function tickAt(T) {
+  const s = segAt(T);
+  if (s.kind !== "run") return s.tick;
+  const x = clamp(T - s.t0, 0, s.cum[TT]); let i = 0; while (i < TT - 1 && s.cum[i + 1] <= x) i++;
+  return s.tick0 + i + (x - s.cum[i]) / (s.cum[i + 1] - s.cum[i]);
+}
+const timeOfTick = tk => TICK_T[clamp(Math.floor(tk), 0, WEEK)] + (tk - Math.floor(tk)) * RUN / TT;
+
+// ---- the director: one shot per turn, chosen from what happens in it -----------------------------------------------
+const lats = R.board.cities.map(c => c.lat), lons = R.board.cities.map(c => c.lon);
+const BOARD_C = [(Math.min(...lons) + Math.max(...lons)) / 2, (Math.min(...lats) + Math.max(...lats)) / 2 - 0.9];
+function roadTime(tid, lo, hi) { let n = 0; for (let k = lo; k < hi; k += 1) { const L = logical(tid, k); if (!L.city) n += L.state === "loaded" ? 1.3 : 1; } return n; }
+const SHOTS = [{ kind: "intro", t0: 0 }];
+for (let k = 0, prev = null, lastRegion = -9; k < NT; k++) {
+  const lo = k * TT, hi = lo + TT, t0 = SEG[1 + 2 * k].t0;
+  let shot = null;
+  const ev = KEY_EVENTS.filter(e => e.t >= lo && e.t < hi && e.truck).sort((a, b) => KEY[b.kind] - KEY[a.kind] || a.t - b.t)[0];
+  const fresh = CLOSURES.filter(c => c.from >= lo && c.from < hi && c.to - c.from >= 16).sort((a, b) => (b.m1 - b.m0) - (a.m1 - a.m0) || (a.closure_id < b.closure_id ? -1 : 1));
+  if (ev) shot = { kind: "follow", truck: ev.truck, ev };
+  else if (fresh.length && k - lastRegion > 3) { shot = { kind: "region", at: fresh[0].mid, brg0: (fresh[0].ends[0].brg + 70) % 360, closure: fresh[0] }; lastRegion = k; }
+  else if (k % 5 === 2) shot = { kind: "board" };
+  else {
+    const mine = R.trucks.filter(t => t.seat === SEAT).map(t => ({ id: t.id, v: roadTime(t.id, lo, hi) * (prev && prev.truck === t.id ? 0.6 : 1) + hash(t.id + k) * 0.1 }));
+    const best = mine.sort((a, b) => b.v - a.v)[0];
+    shot = best && best.v > 2 ? { kind: "follow", truck: best.id } : { kind: "hub" };
+  }
+  shot.t0 = t0; shot.turn = k; SHOTS.push(shot); prev = shot;
+}
+SHOTS.push({ kind: "outro", t0: SEG[SEG.length - 1].t0 });
+function shotAt(T) { let i = 0; while (i + 1 < SHOTS.length && SHOTS[i + 1].t0 <= T) i++; return i; }
+
+const FOLLOW_Z = 9.7;
+function motionBearing(tid, tick, S) {   // the direction a truck has been going, smoothed; null if it hardly moved
+  let ex = 0, ny = 0;
+  for (let k = -3; k <= 3; k += 0.5) {
+    const a = world(tid, tick + k - 0.25, S).p, b = world(tid, tick + k + 0.25, S).p, w = 1 - Math.abs(k) / 3.5;
+    ex += (b[0] - a[0]) * Math.cos(a[1] * D2R) * w; ny += (b[1] - a[1]) * w;
+  }
+  const m = Math.hypot(ex, ny) * M_PER_DEG;
+  return { brg: (Math.atan2(ex, ny) / D2R + 360) % 360, m };
+}
+function camFor(shot, T, tick) {
+  const u = T - shot.t0;
+  switch (shot.kind) {
+    case "intro": { const e = smoother(T / INTRO); return { center: [lerp(-95.6, BOARD_C[0], e), lerp(29.4, BOARD_C[1], e)], zoom: lerp(4.9, 6.05, e), pitch: lerp(20, 46, e), bearing: lerp(-28, -10, e) }; }
+    case "board": return { center: BOARD_C, zoom: 6.05, pitch: 46, bearing: -10 + 6 * Math.sin(u * 0.08) };
+    case "outro": return { center: BOARD_C, zoom: lerp(6.05, 5.75, smooth(u / 10)), pitch: lerp(46, 38, smooth(u / 10)), bearing: -10 + u * 1.2 };
+    case "hub": return { center: CITY[HUB].p, zoom: 9.0, pitch: 58, bearing: (LOT[HUB] + 160 + u * 5) % 360 };
+    case "region": return { center: shot.at, zoom: 8.4, pitch: 60, bearing: shot.brg0 + u * 3 };
+    case "follow": {
+      const S = unitMeters(FOLLOW_Z, CITY[HUB].lat), w = world(shot.truck, tick, S), mb = motionBearing(shot.truck, tick, S);
+      const parkBrg = (w.parked ? LOT[w.L.city] + 180 : w.brg) + 25 + u * 4;
+      const k = smooth((mb.m - 3 * S) / (12 * S)), brg = lerpAngle(parkBrg, mb.brg, k);
+      return { center: step(w.p, brg, lerp(0, 9000, k)), zoom: FOLLOW_Z, pitch: lerp(55, 63, k), bearing: brg };
+    }
+  }
+  throw new Error("unknown shot " + shot.kind);
+}
+function camera(T) {
+  const i = shotAt(T), tick = tickAt(T), cur = camFor(SHOTS[i], T, tick);
+  const e = smoother((T - SHOTS[i].t0) / FLY);
+  if (i === 0 || e >= 1) return cur;
+  const was = camFor(SHOTS[i - 1], T, tick), far = metersBetween(was.center, cur.center);
+  const dip = clamp(Math.log2(far / 30000), 0, 2.6) * Math.sin(Math.PI * e);
+  return { center: [lerp(was.center[0], cur.center[0], e), lerp(was.center[1], cur.center[1], e)], zoom: lerp(was.zoom, cur.zoom, e) - dip,
+           pitch: lerp(was.pitch, cur.pitch, e) - 12 * Math.sin(Math.PI * e) * clamp(dip, 0, 1), bearing: lerpAngle(was.bearing, cur.bearing, e) };
+}
+
+
+// ---- the map ------------------------------------------------------------------------------------------------------
+const style = await getJSON("https://tiles.openfreemap.org/styles/dark");
+const DROP = /^(place_(other|suburb|village|town|city|city_large)|highway_name_|road_oneway|water_name|aeroway|railway)/;
+style.layers = style.layers.filter(l => !DROP.test(l.id));
+for (const l of style.layers) {
+  if (l.id === "background") l.paint["background-color"] = "#0a0d12";
+  if (l.id === "water") l.paint["fill-color"] = "#0b1826";
+  if (l.id === "waterway") l.paint["line-color"] = "#0e1c2b";
+  if (l.id === "boundary_state") { l.paint["line-color"] = "#3b4757"; }
+  if (/^boundary_country/.test(l.id)) l.paint["line-color"] = "#4a5668";
+  if (/^place_(state|country)/.test(l.id)) { l.paint["text-color"] = "#5f6b7a"; l.layout = { ...l.layout, "text-letter-spacing": 0.3, "text-transform": "uppercase" }; }
+  if (l.id === "highway_motorway_inner") l.paint["line-color"] = "#1b222b";
+  if (l.id === "highway_motorway_casing") l.paint["line-color"] = "rgba(70,84,100,0.7)";
+}
+style.sources.dem = { type: "raster-dem", tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 12, encoding: "terrarium",
+                      attribution: "Terrain: Mapzen terrain tiles (AWS Open Data)" };
+const at = id => style.layers.findIndex(l => l.id === id) + 1;
+style.layers.splice(at("background"), 0,
+  { id: "relief", type: "raster", source: "ne2_shaded", maxzoom: 9, paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0.5, 7, 0.32, 9, 0] , "raster-saturation": -0.45, "raster-brightness-max": 0.5, "raster-contrast": 0.1 } },
+  { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.45, "hillshade-shadow-color": "#000000", "hillshade-highlight-color": "#2b3747", "hillshade-accent-color": "#05070a" } });
+const FIRST_SYMBOL = (style.layers.find(l => l.type === "symbol") || {}).id;
+
+const map = new maplibregl.Map({ container: "map", style, interactive: !RECORD, attributionControl: { compact: false }, maxPitch: 75, fadeDuration: 0,
+                                 center: BOARD_C, zoom: 6, pitch: 46, bearing: -10, canvasContextAttributes: { preserveDrawingBuffer: RECORD, antialias: true } });
+await new Promise((res, rej) => { map.once("load", res); map.once("error", ev => rej(ev.error || new Error("the map failed to load"))); });
+let skyKey = "";
+function setSky(day) {
+  const key = day.toFixed(2); if (key === skyKey) return; skyKey = key;
+  const mix = (a, b) => `rgb(${a.map((v, i) => Math.round(lerp(v, b[i], day))).join(",")})`;
+  map.setSky({ "sky-color": mix([6, 10, 22], [38, 74, 128]), "horizon-color": mix([20, 30, 52], [150, 172, 196]), "fog-color": mix([10, 14, 22], [66, 82, 102]),
+               "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.7, "fog-ground-blend": 0.35, "atmosphere-blend": 0 });
+}
+
+// ---- deck.gl ------------------------------------------------------------------------------------------------------
+const overlay = new MapLibreOverlay({ interleaved: true, layers: [] });
+map.addControl(overlay);
+const atlas = (draw, w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h); return c; };
+const CLOUD = atlas((g, w, h) => { for (const [x, y, r] of [[.32, .55, .2], [.5, .45, .26], [.68, .55, .2], [.5, .6, .22]]) { const gr = g.createRadialGradient(x * w, y * h, 0, x * w, y * h, r * w); gr.addColorStop(0, "rgba(255,255,255,0.55)"); gr.addColorStop(0.6, "rgba(255,255,255,0.25)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, w, h); } }, 256, 256);
+const ICONS = atlas((g) => {
+  g.lineJoin = "round";
+  g.fillStyle = "#ff6155"; g.beginPath(); g.moveTo(32, 6); g.lineTo(60, 56); g.lineTo(4, 56); g.closePath(); g.fill();       // warning
+  g.fillStyle = "#fff"; g.fillRect(29, 22, 6, 20); g.fillRect(29, 46, 6, 6);
+  g.fillStyle = "#ff6155"; g.beginPath(); g.arc(96, 32, 27, 0, 7); g.fill(); g.fillStyle = "#fff"; g.fillRect(78, 28, 36, 8);   // no entry
+  g.fillStyle = "#f2b84b"; g.beginPath(); g.arc(160, 32, 27, 0, 7); g.fill(); g.strokeStyle = "#1a1206"; g.lineWidth = 5;      // clock
+  g.beginPath(); g.moveTo(160, 32); g.lineTo(160, 15); g.moveTo(160, 32); g.lineTo(173, 38); g.stroke();
+  g.fillStyle = "#9ec3ff"; g.font = "bold 40px -apple-system, Arial"; g.textAlign = "center"; g.fillText("z", 216, 44);          // rest
+}, 256, 64);
+const ICON_MAP = { warn: { x: 0, y: 0, width: 64, height: 64 }, held: { x: 64, y: 0, width: 64, height: 64 }, wait: { x: 128, y: 0, width: 64, height: 64 }, rest: { x: 192, y: 0, width: 64, height: 64 } };
+const GLOW = atlas((g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.25, "rgba(255,255,255,0.45)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, w, w); }, 128, 128);
+const VEIL = [[-110, 20], [-80, 20], [-80, 42], [-110, 42]];
+const CITIES = Object.values(CITY);
+const HUBS = SEATS.map(s => ({ seat: s, city: R.seats[s].hub, p: CITY[R.seats[s].hub].p }));
+const MODEL_KEYS = []; for (const s of SEATS) for (const m of ["semi", "reefer", "box", "van"]) if (R.trucks.some(t => t.seat === s && modelOf(t) === m)) MODEL_KEYS.push(`${m}-${s}`);
+const FONT = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif";
+
+function layers(T, tick, S, zoom) {
+  const night = 1 - dayness(tick), poses = R.trucks.map(t => ({ t, ...pose(t.id, tick, S) }));
+  const wx = weatherAt(tick), shut = closuresAt(tick), blink = 0.55 + 0.45 * Math.sin(T * 7);
+  const out = [
+    new D.SolidPolygonLayer({ id: "light", data: [VEIL], getPolygon: d => d, getFillColor: night > 0.5 ? [3, 6, 18, Math.round(210 * (night - 0.5))] : [96, 116, 146, Math.round(110 * (0.5 - night))], beforeId: FIRST_SYMBOL, updateTriggers: { getFillColor: night } }),
+    new D.PathLayer({ id: "roads-glow", data: ROADS, getPath: d => d.coords, getColor: [120, 170, 230, 60], getWidth: d => d.interstate ? 10 : 7, widthUnits: "pixels", capRounded: true, jointRounded: true }),
+    new D.PathLayer({ id: "roads", data: ROADS, getPath: d => d.coords, getColor: d => d.interstate ? [184, 212, 242, 215] : [150, 178, 210, 180], getWidth: d => d.interstate ? 2.6 : 1.8, widthUnits: "pixels", capRounded: true, jointRounded: true }),
+    new D.PathLayer({ id: "weather", data: wx, getPath: d => d.w.path, getColor: d => [...WX_RGB[d.kind], Math.round(255 * (0.22 + 0.5 * d.sev) * d.fade)], getWidth: d => 3 + 8 * d.sev, widthUnits: "pixels", capRounded: true, jointRounded: true, updateTriggers: { getColor: tick, getWidth: tick } }),
+  ];
+  const clouds = [], flakes = [];
+  for (const d of wx) {
+    if (d.kind === "cold") continue;
+    const n = clamp(Math.round(d.w.km / 45), 1, 2);
+    for (let i = 0; i < n; i++) {
+      const h = hash(d.w.k + i), p = d.w.path[Math.floor(h * d.w.path.length)];
+      clouds.push({ p: offset(p, (hash(d.w.k + "x" + i) - 0.5) * 9000, (hash(d.w.k + "y" + i) - 0.5) * 9000), size: (22000 + 16000 * hash(d.w.k + "s" + i)) * (0.7 + 0.6 * d.sev),
+                    c: [...(d.kind === "rain" ? [70, 78, 92] : [200, 210, 224]), Math.round(120 * d.fade * (0.45 + 0.55 * d.sev) * (d.kind === "rain" && hash(Math.floor(T * 9) + d.w.k) > 0.965 ? 1.7 : 1))] });
+    }
+    if (d.kind === "snow" || d.kind === "rain") {
+      const m = clamp(Math.round(d.w.km / 5), 3, 16), fall = d.kind === "snow" ? 0.11 : 0.5;
+      for (let i = 0; i < m; i++) {
+        const p = d.w.path[Math.floor(hash(d.w.k + "f" + i) * d.w.path.length)], z = 7000 * (1 - (((hash(d.w.k + "z" + i) + T * fall) % 1) + 1) % 1);
+        flakes.push({ p: [...offset(p, (hash(d.w.k + "a" + i) - 0.5) * 14000, (hash(d.w.k + "b" + i) - 0.5) * 14000), z], c: d.kind === "snow" ? [240, 248, 255, Math.round(220 * d.fade)] : [140, 180, 255, Math.round(200 * d.fade)], r: d.kind === "snow" ? 1.5 : 1.1 });
+      }
+    }
+  }
+  for (const [city, ivs] of Object.entries(WX_CITY)) {   // v1 replays: weather at a city
+    const live = ivs.filter(iv => iv.from <= tick && tick < iv.to); if (!live.length) continue;
+    const worst = live.reduce((a, b) => b.f < a.f ? b : a);
+    clouds.push({ p: CITY[city].p, size: 50000, c: [...WX_RGB[WX_KIND(worst.type)], 120] });
+  }
+  out.push(
+    new D.ScatterplotLayer({ id: "flakes", data: flakes, getPosition: d => d.p, getRadius: d => d.r, radiusUnits: "pixels", getFillColor: d => d.c, billboard: true, updateTriggers: { getPosition: T } }),
+    new D.IconLayer({ id: "clouds", data: clouds, iconAtlas: CLOUD, iconMapping: { c: { x: 0, y: 0, width: 256, height: 256, mask: true } }, getIcon: () => "c", getPosition: d => [d.p[0], d.p[1], 8000], getSize: d => d.size, sizeUnits: "meters", getColor: d => d.c, billboard: false, updateTriggers: { getColor: T } }),
+    new D.PathLayer({ id: "closure-glow", data: shut, getPath: d => d.path, getColor: [255, 60, 50, Math.round(90 * blink)], getWidth: 16, widthUnits: "pixels", capRounded: true, jointRounded: true, updateTriggers: { getColor: T } }),
+    new D.PathLayer({ id: "closures", data: shut, getPath: d => d.path, getColor: [255, 86, 72, 255], getWidth: 5, widthUnits: "pixels", capRounded: true, jointRounded: true }),
+    new D.ColumnLayer({ id: "barriers", data: shut.flatMap(c => c.ends.map(e => ({ p: e.p }))), getPosition: d => d.p, radius: 0.9 * S, diskResolution: 4, getElevation: 2.6 * S, getFillColor: [235, 40, 36, 255], extruded: true }),
+    new D.ScatterplotLayer({ id: "barrier-glow", data: shut.flatMap(c => c.ends.map(e => ({ p: e.p }))), getPosition: d => d.p, getRadius: 8 + 6 * blink, radiusUnits: "pixels", getFillColor: [255, 70, 60, Math.round(70 * blink)], updateTriggers: { getRadius: T, getFillColor: T } }),
+    new D.IconLayer({ id: "city-glow", data: CITIES, iconAtlas: GLOW, iconMapping: { g: { x: 0, y: 0, width: 128, height: 128, mask: true } }, getIcon: () => "g", getPosition: d => d.p, getSize: d => d.freight ? 26000 : 13000, sizeUnits: "meters", billboard: false, getColor: [255, 200, 130, Math.round(130 * night)], updateTriggers: { getColor: night } }),
+    new D.ScatterplotLayer({ id: "cities", data: CITIES, getPosition: d => d.p, getRadius: d => d.freight ? 4.2 : 2.8, radiusUnits: "pixels", getFillColor: d => d.freight ? [226, 234, 244] : [150, 166, 184], stroked: true, getLineColor: [8, 10, 14], lineWidthUnits: "pixels", getLineWidth: 1.5 }),
+    new D.ColumnLayer({ id: "hubs", data: HUBS, getPosition: d => step(d.p, LOT[d.city] + 180, 6 * S), radius: 2.2 * S, diskResolution: 6, getElevation: 13 * S, getFillColor: d => [...SEAT_RGB[d.seat], 235], extruded: true, material: { ambient: 0.5, diffuse: 0.6, shininess: 40 } }),
+    new D.ScatterplotLayer({ id: "hub-rings", data: HUBS, getPosition: d => d.p, getRadius: d => (11 + 3 * Math.sin(T * 2 + hash(d.seat) * 6)) * S, radiusUnits: "meters", stroked: true, filled: false, getLineColor: d => [...SEAT_RGB[d.seat], 200], lineWidthUnits: "pixels", getLineWidth: 2.5, updateTriggers: { getRadius: T } }),
+    new D.TextLayer({ id: "city-names", data: CITIES.filter(c => !HUBS.some(h => h.city === c.id)), getPosition: d => d.p, getText: d => d.name, getSize: d => d.freight ? 14 : 11.5, getColor: d => d.freight ? [214, 224, 236, 235] : [150, 164, 182, 220], getPixelOffset: [0, -15], fontFamily: FONT, fontWeight: 600, fontSettings: { sdf: true }, outlineWidth: 4, outlineColor: [6, 8, 12, 230], characterSet: "auto", billboard: true }),
+    new D.TextLayer({ id: "hub-names", data: HUBS, getPosition: d => [...step(d.p, LOT[d.city] + 180, 6 * S), 13 * S], getText: d => `${CITY[d.city].name.toUpperCase()} · ${d.seat}${d.seat === SEAT ? " · " + MODEL : ""}`, getSize: 15, getColor: d => [...SEAT_RGB[d.seat], 255], getPixelOffset: [0, -12], updateTriggers: { getPosition: S }, fontFamily: FONT, fontWeight: 800, fontSettings: { sdf: true }, outlineWidth: 5, outlineColor: [6, 8, 12, 240], characterSet: "auto", billboard: true }),
+    new D.TripsLayer({ id: "trails", data: TRIPS, getPath: d => d.path, getTimestamps: d => d.ts, getColor: d => SEAT_RGB[d.seat], opacity: 0.85, widthMinPixels: 3.5, capRounded: true, jointRounded: true, trailLength: 7, currentTime: tick, fadeTrail: true }),
+  );
+  const moving = poses.filter(d => !d.parked && d.L.state !== "broken" && d.L.state !== "held");
+  if (night > 0.05) out.push(
+    new D.ScatterplotLayer({ id: "beams", data: moving, getPosition: d => step(d.p, d.brg, 10 * S), getRadius: 3.2 * S, radiusUnits: "meters", getFillColor: [255, 226, 160, Math.round(60 * night)], updateTriggers: { getPosition: T, getFillColor: night } }),
+    new D.ScatterplotLayer({ id: "headlights", data: moving.flatMap(d => [-0.5, 0.5].map(s => step(step(d.p, d.brg, 4.4 * S * (modelOf(d.t) === "van" ? 0.33 : modelOf(d.t) === "box" ? 0.5 : 1)), d.brg + 90, s * S))), getPosition: d => d, getRadius: 2.2, radiusUnits: "pixels", getFillColor: [255, 246, 214, Math.round(240 * night)], updateTriggers: { getPosition: T, getFillColor: night } }));
+  const pulse = 0.5 + 0.5 * Math.sin(T * 5);
+  const flagged = poses.filter(d => ["broken", "held", "detention"].includes(d.L.state));
+  out.push(new D.ScatterplotLayer({ id: "status-rings", data: flagged, getPosition: d => d.p, getRadius: (6 + 2 * pulse) * S, radiusUnits: "meters", stroked: true, filled: true, getFillColor: d => d.L.state === "detention" ? [242, 184, 75, 40] : [255, 80, 70, 50], getLineColor: d => d.L.state === "detention" ? [242, 184, 75, 230] : [255, 80, 70, 230], lineWidthUnits: "pixels", getLineWidth: 2, updateTriggers: { getRadius: T, getPosition: T } }));
+  for (const key of MODEL_KEYS) {
+    const [m, s] = key.split("-");
+    out.push(new D.ScenegraphLayer({ id: "trucks-" + key, data: poses.filter(d => d.t.seat === s && modelOf(d.t) === m), scenegraph: `models/${key}.glb`, getPosition: d => [d.p[0], d.p[1], 0], getOrientation: d => [0, 180 - d.brg, 90], sizeScale: S, _lighting: "flat", updateTriggers: { getPosition: T, getOrientation: T } }));
+  }
+  const iconOf = d => ({ broken: "warn", held: "held", detention: "wait", resting: "rest" })[d.L.state];
+  out.push(new D.IconLayer({ id: "status-icons", data: poses.filter(d => iconOf(d) && (d.t.seat === SEAT || zoom > 8)), iconAtlas: ICONS, iconMapping: ICON_MAP, getIcon: iconOf, getPosition: d => [d.p[0], d.p[1], 6 * S], getSize: d => d.L.state === "resting" ? 18 : 24, sizeUnits: "pixels", billboard: true, updateTriggers: { getPosition: T } }));
+  return { layers: out, poses, wx, shut };
+}
+
+// ---- the overlay --------------------------------------------------------------------------------------------------
+const hudScale = () => { const s = innerWidth / 1920; $("hud").style.transform = `scale(${s})`; $("hud").style.height = `${innerHeight / s}px`; document.documentElement.style.setProperty("--s", Math.max(0.7, s)); };
+addEventListener("resize", hudScale); hudScale();
+const storm = R.events.filter(e => e.kind === "weather_start" && WX_KIND(e.type) === "snow").length >= 20;
+$("title").textContent = `${MODEL} runs ${HUB_NAME}'s trucking company${storm ? " through a winter storm" : " for a week"}`;
+$("who").textContent = `Played by ${MODEL}, through MCP tools only · seat ${SEAT} of ${SEATS.length}`;
+$("desc").textContent = `A real week, ${shortDate(0)}–${shortDate(6)}, ${R.week.monday.slice(0, 4)}: freight from FAF5, diesel from EIA, weather and road closures from NOAA. The other two companies are run by the optimizer.`;
+$("modelname").textContent = MODEL;
+$("seatline").textContent = `company ${SEAT} · hub ${HUB_NAME} · ${R.trucks.filter(t => t.seat === SEAT).length} units, ${(R.drivers || []).filter(d => d.seat === SEAT).length} drivers`;
+$("fleethub").textContent = HUB_NAME;
+$("pnlseat").textContent = `${SEAT} · ${HUB_NAME}`;
+// The timeline bar: days, the agent's key moments (amber) and closures (red).
+const tpos = T => `${(T / DURATION * 100).toFixed(3)}%`;
+$("tmarks").innerHTML = [...Array(7).keys()].map(d => `<span class="day" style="left:${tpos(timeOfTick(d * 96 + 48))}">${DAYS[d]}</span>`).join("")
+  + CLOSURES.map(c => `<span class="mk" style="left:${tpos(timeOfTick(c.from))};background:var(--red);opacity:.6"></span>`).join("")
+  + KEY_EVENTS.map(e => `<span class="mk" style="left:${tpos(timeOfTick(e.t))};background:var(--accent)"></span>`).join("");
+const STATE_RGB = { loaded: "var(--ok)", empty: "#8fa3b8", stopped: "#c7cdd5", resting: "#6c7b8c", detention: "var(--warn)", broken: "var(--red)", held: "var(--red)" };
+const STATE_TXT = { loaded: "loaded", empty: "empty, deadhead", stopped: "at the dock", resting: "resting (HOS)", detention: "waiting at a dock", broken: "broken down", held: "held by a closure" };
+const MY_TRUCKS = R.trucks.filter(t => t.seat === SEAT);
+$("fleetrows").innerHTML = MY_TRUCKS.map(t => `<div class="fr" id="fr-${t.id}"><span class="dot"></span><span class="id">${t.id}</span><span class="cls">${UNIT_LABEL[modelOf(t)]}${t.owner === "owner_operator" ? " · O/O" : ""}</span><span class="drv"></span><span class="st"></span></div>`).join("");
+$("fleetnote").textContent = `${MY_TRUCKS.length} units · ${MY_TRUCKS.filter(t => t.owner === "owner_operator").length} owner-operators`;
+const cache = {};
+const put = (id, html, prop = "innerHTML") => { if (cache[id] !== html) { cache[id] = html; $(id)[prop] = html; } };
+const DELIVERED = MINE.filter(e => e.kind === "delivered");
+
+function hud(T, tick, frame) {
+  const seg = segAt(T), turn = seg.turn ?? (seg.kind === "outro" ? NT - 1 : 0);
+  put("clock", clockOf(tick), "textContent");
+  put("date", dateOf(Math.min(tick, WEEK - 1)), "textContent");
+  put("turnchip", seg.kind === "intro" ? "before the week" : seg.kind === "outro" ? "week over" : `turn ${turn + 1} of ${NT}`, "textContent");
+  const slow = seg.kind === "run" && slowTicks.has(Math.floor(tick));
+  const [mode, text, color] = seg.kind === "intro" ? ["PREVIEW", "the week is about to start", "var(--muted)"]
+    : seg.kind === "plan" ? ["SIM PAUSED", `the agent is planning turn ${turn + 1}: ${(FEED[turn] || []).length} tool calls`, "var(--accent)"]
+    : seg.kind === "outro" ? ["WEEK OVER", "Monday 00:00: the books close", "var(--muted)"]
+    : slow ? ["SLOW MOTION", "something happened to one of its trucks", "var(--ice)"]
+    : ["TIME WARP", `6 game hours in ${RUN} s · about ${Math.round(6 * 3600 / RUN / 100) * 100}× real time`, "var(--ok)"];
+  put("modename", mode, "textContent"); $("modename").style.color = color; put("modetext", text, "textContent");
+
+  // caption: the agent's own plan while it plans; what the camera is watching while the hours run
+  let ct = "", cx = "";
+  if (seg.kind === "plan") {
+    const notes = (TURN[turn] || {}).notes;
+    ct = `Turn ${turn + 1}: the plan`; cx = notes ? `<q>${esc(firstSentences(notes))}</q><span class="src">ITS OWN NOTES, WRITTEN AT ${clockOf(turn * TT).toUpperCase()}</span>` : "The agent made no notes this turn.";
+  } else if (seg.kind === "run") {
+    const shot = SHOTS[shotAt(T)];
+    if (shot.ev && tick >= shot.ev.t - 2) { const [a, b] = eventCaption(shot.ev); ct = a; cx = esc(b); }
+    else if (shot.kind === "region") { const c = shot.closure; ct = `${route(c.road)} closes`; cx = esc(`${c.cause} · ${c.where}. ${c.source === "NOAA narrative" ? "NOAA's report: " + c.what : "Modeled from the storm."} Announced to reopen about ${clockOf(c.reopens_about)}.`); }
+    else if (shot.kind === "board") { const w = weatherAt(tick).length, c = closuresAt(tick).length; ct = `${DAYS[Math.floor(tick / 96)]}: the whole board`; cx = esc(`Three companies, ${R.trucks.length} units. ${w ? `${w} road stretches under storms` : "Clear roads"}${c ? `, ${c} closed` : ""}.`); }
+    else if (shot.kind === "follow") { const [a, b] = truckBlurb(shot.truck, tick); ct = a; cx = esc(b); }
+    else { ct = `${HUB_NAME}, the agent's hub`; cx = "Its trucks between jobs."; }
+  }
+  put("capt", ct, "textContent"); put("capx", cx);
+  const capIn = seg.kind === "plan" || seg.kind === "run" ? smooth((T - (seg.kind === "run" ? SHOTS[shotAt(T)].t0 : seg.t0)) / 0.35) : 0;
+  $("cap").style.opacity = ct ? Math.max(capIn, seg.kind === "run" ? 1 : capIn) : 0;
+
+  // feed
+  const lines = FEED[turn] || [], shown = seg.kind === "plan" ? Math.ceil(lines.length * smooth((T - seg.t0) / ((seg.t1 - seg.t0) * 0.8))) : seg.kind === "intro" ? 0 : lines.length;
+  const vis = lines.slice(0, shown).map((l, i) => ({ ...l, i })).slice(-8);
+  put("feednote", seg.kind === "intro" ? "" : `turn ${turn + 1} · ${lines.length} calls`, "textContent");
+  put("feedrows", vis.map(l => l.say ? `<div class="fl say"><span class="n">#${l.i + 1}</span><div><div class="fn">“${esc(firstSentences(l.fn, 120))}”</div></div></div>`
+    : `<div class="fl${l.act ? " act" : ""}${l.err ? " err" : ""}"><span class="n">#${l.i + 1}</span><div><div class="fn">${esc(l.fn)}</div><div class="res">${esc(l.res)}</div></div></div>`).join(""));
+
+  // fleet
+  for (const t of MY_TRUCKS) {
+    const d = frame.poses.find(p => p.t.id === t.id), L = d.L;
+    const where = L.city ? CITY[L.city].name : `${route(edgeOf(L.a, L.b).route)} → ${CITY[L.b].name}`;
+    const row = $("fr-" + t.id);
+    const key = `${L.state}|${crewNames(L.crew)}|${where}`;
+    if (cache["fr" + t.id] !== key) {
+      cache["fr" + t.id] = key;
+      row.children[0].style.background = STATE_RGB[L.state] || "#888";
+      row.children[3].textContent = crewNames(L.crew) || "no driver";
+      row.children[4].textContent = `${L.state === "stopped" && !L.city ? "stopped" : STATE_TXT[L.state] || L.state} · ${where}`;
+    }
+  }
+  // books
+  const [p, rev, cost] = booksAt(SEAT, tick), done = DELIVERED.filter(e => e.t <= tick);
+  put("profit", money(p, true), "textContent"); $("profit").style.color = p >= 0 ? "var(--ok)" : "var(--red)";
+  const count = st => frame.poses.filter(d => d.t.seat === SEAT && st.includes(d.L.state)).length;
+  put("pnlrows", [["Revenue so far", money(rev)], ["Costs so far", money(cost)], ["Loads delivered", `${done.length}${done.some(e => e.late) ? ` · ${done.filter(e => e.late).length} late` : ""}`],
+    ["On the road", `${count(["loaded", "empty"])} of ${MY_TRUCKS.length}`], ["Resting or at docks", count(["resting", "stopped", "detention"])], ["Broken down or held", count(["broken", "held"])]]
+    .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join(""));
+  race(tick);
+  // weather & roads
+  const wx = frame.wx.filter(d => d.fade > 0.5), worst = wx.reduce((a, b) => (!a || b.sev > a.sev ? b : a), null);
+  put("wxnote", `NOAA Storm Events · ${dateOf(Math.min(tick, WEEK - 1))}`, "textContent");
+  put("wxbody", `<div class="big">${wx.length ? `${wx.length} road stretch${wx.length > 1 ? "es" : ""} under weather` : "Clear roads"}</div>`
+    + `<div class="sub">${worst ? esc(`worst: ${worst.iv.type}, ${worst.iv.where} · trucks at ${Math.round(100 * (1 - worst.sev))}% speed`) : "no NOAA events on the board's roads now"}</div>`
+    + frame.shut.slice(0, 3).map(c => `<div class="cl"><span class="tag">CLOSED</span><span>${esc(route(c.road))}</span><span class="when">reopens ~${clockOf(c.reopens_about)}</span></div>`).join("")
+    + (frame.shut.length > 3 ? `<div class="cl"><span class="when" style="margin-left:0">+${frame.shut.length - 3} more closed</span></div>` : ""));
+  $("tfill").style.width = tpos(T);
+  overlays(T, seg);
+}
+
+const RACE_W = 606, RACE_H = 160, PAD = { l: 8, r: 150, t: 10, b: 18 };
+const ALL_P = SEATS.flatMap(s => BOOKS[s].map(p => p[1])).concat(REFS ? [REFS.naive_usd, REFS.anchor_usd] : []);
+const PMIN = Math.min(0, ...ALL_P), PMAX = Math.max(0, ...ALL_P);
+const rx = tk => PAD.l + tk / WEEK * (RACE_W - PAD.l - PAD.r), ry = v => PAD.t + (1 - (v - PMIN) / ((PMAX - PMIN) || 1)) * (RACE_H - PAD.t - PAD.b);
+function race(tick) {
+  const key = Math.round(tick * 4); if (cache.race === key) return; cache.race = key;
+  const parts = [`<line x1="${PAD.l}" x2="${RACE_W - PAD.r}" y1="${ry(0)}" y2="${ry(0)}" stroke="rgba(255,255,255,.18)"/>`];
+  if (REFS) for (const [v, name] of [[REFS.anchor_usd, "optimizer"], [REFS.naive_usd, "simple dispatcher"]]) {
+    parts.push(`<line x1="${PAD.l}" x2="${RACE_W - PAD.r}" y1="${ry(v)}" y2="${ry(v)}" stroke="rgba(255,255,255,.28)" stroke-dasharray="3 4"/>`,
+               `<text x="${RACE_W - PAD.r + 8}" y="${ry(v) + 4}" font-size="11.5" fill="#7d8794">${name} ${money(v, true)}</text>`);
+  }
+  for (const s of SEATS) {
+    const pts = BOOKS[s].filter(p => p[0] <= tick).map(p => [p[0], p[1]]); pts.push([tick, booksAt(s, tick)[0]]);
+    const d = pts.map(([x, v], i) => `${i ? "L" : "M"}${rx(x).toFixed(1)},${ry(v).toFixed(1)}`).join("");
+    const me = s === SEAT, [lx, lv] = pts[pts.length - 1];
+    parts.push(`<path d="${d}" fill="none" stroke="${seatCss(s)}" stroke-width="${me ? 3 : 1.6}" stroke-linejoin="round" opacity="${me ? 1 : 0.75}"/>`,
+               `<circle cx="${rx(lx)}" cy="${ry(lv)}" r="${me ? 4.5 : 3}" fill="${seatCss(s)}"/>`);
+    if (me) parts.push(`<text x="${rx(lx) + 8}" y="${ry(lv) - 8}" font-size="13" font-weight="700" fill="${seatCss(s)}">${money(lv, true)}</text>`);
+  }
+  parts.push(`<text x="${PAD.l}" y="${RACE_H - 2}" font-size="11" fill="#66707c">Mon</text><text x="${RACE_W - PAD.r}" y="${RACE_H - 2}" font-size="11" fill="#66707c" text-anchor="end">Sun</text>`,
+             ...SEATS.map((s, i) => `<text x="${PAD.l + 40 + i * 150}" y="${RACE_H - 2}" font-size="11.5" fill="${seatCss(s)}">● ${s}${s === SEAT ? ` · ${MODEL}` : " · optimizer"}</text>`));
+  $("racesvg").innerHTML = parts.join("");
+}
+
+// intro and outro cards
+const QUOTES = (() => {
+  const notes = Object.values(TURN).filter(t => (t.notes || "").length > 40);
+  const first = notes[0], last = notes[notes.length - 1];
+  return [first, last && last !== first ? last : null].filter(Boolean).map(t => ({ text: firstSentences(t.notes, 260), when: clockOf(t.turn * TT) }));
+})();
+const nLate = DELIVERED.filter(e => e.late).length, usage = AGENT.usage || {};
+$("intro").innerHTML = `<div class="k">TRUCKSIM · AGENT-DRIVEN WEEK</div><h1>${esc($("title").textContent)}</h1>
+  <p>${esc(MODEL)} dispatches ${MY_TRUCKS.length} units out of ${esc(HUB_NAME)} for one real week of Texas Triangle freight, ${shortDate(0)}–${shortDate(6)}, ${R.week.monday.slice(0, 4)}, using only the tools a dispatcher has. Two rival companies, run by the optimizer, bid for the same loads.</p>
+  <div class="facts"><div><b>${R.events.filter(e => e.kind === "offer_posted").length}</b>loads posted</div><div><b>${R.events.filter(e => e.kind === "weather_start").length}</b>NOAA weather events</div><div><b>${CLOSURES.length}</b>road closures</div><div><b>${NT}</b>turns of 6 hours</div></div>`;
+const rulerPts = REFS ? [[REFS.naive_usd, 0.2, "simple dispatcher", "#9ba4b0", false], [REFS.anchor_usd, 1.0, "optimizer", "#c8cfd8", false], [R.seats[SEAT].profit_usd, SCORE, MODEL, seatCss(SEAT), true]] : [];
+const rLo = Math.min(...rulerPts.map(p => p[0])), rHi = Math.max(...rulerPts.map(p => p[0]));
+$("outro").innerHTML = `<div id="quotes"><div class="k">IN ITS OWN WORDS</div>${QUOTES.map(q => `<blockquote>“${esc(q.text)}”<cite>— ${esc(MODEL)}'s notes, ${q.when}</cite></blockquote>`).join("")}</div>
+  <div id="result"><div class="k">RESULT</div><h1>Finished the week ${money(R.seats[SEAT].profit_usd, true)}.</h1>
+  <div class="sub">${SCORE != null ? `Score ${SCORE.toFixed(2)}: 0.2 is the simple dispatcher's week in this seat, 1.0 the optimizer's.` : ""}</div>
+  ${REFS ? `<div class="ruler"><div class="ln"></div>${rulerPts.map(([v, sc, name, col, me]) => `<div class="pt" style="left:${((v - rLo) / ((rHi - rLo) || 1) * 90 + 5).toFixed(1)}%"><i style="background:${col}"></i><div class="lb ${me ? "above" : "below"}"><b${me ? ` style="color:${col}"` : ""}>${esc(name)} · ${me ? sc.toFixed(2) : sc.toFixed(1)}</b><span>${money(v, true)}</span></div></div>`).join("")}</div>` : ""}
+  <table><tr><td>Delivered</td><td>${DELIVERED.length} loads${nLate ? `, ${nLate} late` : ""}</td></tr>
+  <tr><td>Tool calls</td><td>${(usage.tool_calls || 0).toLocaleString()} over ${NT} turns</td></tr>
+  <tr><td>Tokens</td><td>${((usage.input_tokens || 0) / 1e6).toFixed(1)}M in · ${Math.round((usage.output_tokens || 0) / 1000)}k out</td></tr>
+  <tr><td>Rivals</td><td>${SEATS.filter(s => s !== SEAT).map(s => `${s} (${esc(CITY[R.seats[s].hub].name)}) ${money(R.seats[s].profit_usd, true)}`).join(" · ")}</td></tr></table></div>`;
+function overlays(T, seg) {
+  const it = seg.kind === "intro" ? (1 - smooth((T - (INTRO - 1.6)) / 1.4)) * smooth(T / 0.6) : 0;
+  $("intro").style.opacity = it; $("intro").style.display = it > 0.01 ? "flex" : "none";
+  const u = seg.kind === "outro" ? T - seg.t0 : -1, ot = u < 0 ? 0 : smooth(u / 0.8);
+  $("outro").style.opacity = ot; $("outro").style.display = ot > 0.01 ? "flex" : "none";
+  if (ot > 0.01) {
+    const q = 1 - smooth((u - 7) / 0.6), r = smooth((u - 7.4) / 0.8);
+    $("quotes").style.opacity = q; $("quotes").style.display = q > 0.01 ? "" : "none";
+    $("result").style.opacity = r; $("result").style.display = r > 0.01 ? "" : "none";
+  }
+  for (const id of ["tl", "cap", "fleet", "feed", "pnl", "race", "wxp"]) $(id).style.visibility = it > 0.6 || ot > 0.6 ? "hidden" : "visible";
+}
+
+// labels on the map: money as loads deliver, the agent's trucks' moments, closed roads
+const POPS = [];
+for (const e of R.events) {
+  if (e.kind === "delivered") POPS.push({ e, t: e.t, truck: e.truck, mine: e.seat === SEAT, cls: "money", color: seatCss(e.seat), text: `+${money(e.revenue_usd)}${e.late ? ` · ${e.late_h ? e.late_h.toFixed(1) + " h " : ""}late` : ""}` });
+  else if (e.seat === SEAT && e.kind === "missed_pickup") POPS.push({ e, t: e.t, truck: truckOfLoad(e.load, e.t), mine: true, cls: "money", color: "var(--red)", text: `missed pickup ${money(-e.penalty)}` });
+  else if (e.seat === SEAT && e.kind === "released") POPS.push({ e, t: e.t, truck: truckOfLoad(e.load, e.t), mine: true, cls: "money", color: "var(--red)", text: `released ${money(-e.penalty)}` });
+  else if (e.seat === SEAT && KEY[e.kind] && e.truck) POPS.push({ e, t: e.t, truck: e.truck, mine: true, cls: "ev", text: { breakdown: "⚠ breakdown", held: "⛔ held", turned_back: "↶ turns back", detour: "↷ detour", adverse_conditions: "+2 h, bad weather", crew_change: "⇄ fresh crew", declined: "✕ declined" }[e.kind] || e.kind });
+}
+const labelEls = new Map();
+function placeLabel(key, cls, html, xy, alpha, color) {
+  let el = labelEls.get(key);
+  if (!el) { el = document.createElement("div"); el.className = "lab " + cls; $("labels").appendChild(el); labelEls.set(key, el); }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+  el.style.left = xy[0] + "px"; el.style.top = xy[1] + "px"; el.style.opacity = alpha; if (color) el.style.color = color;
+  el._seen = true;
+}
+function labels(T, tick, S, frame, zoom) {
+  for (const el of labelEls.values()) el._seen = false;
+  const W = innerWidth, H = innerHeight, boxes = ["tl", "cap", "fleet", "feed", "pnl", "race", "wxp"].map(id => $(id).getBoundingClientRect());
+  const onScreen = xy => xy.x > 20 && xy.x < W - 20 && xy.y > 20 && xy.y < H - 20 && !boxes.some(b => xy.x > b.left - 30 && xy.x < b.right + 30 && xy.y > b.top - 10 && xy.y < b.bottom + 40);
+  for (const p of POPS) {
+    if (!p.truck || (!p.mine && zoom < 8.2)) continue;
+    const age = T - timeOfTick(p.t); if (age < 0 || age > 2.6) continue;
+    const at = pose(p.truck, p.t, S).p, xy = map.project(at); if (!onScreen(xy)) continue;
+    placeLabel(`pop${R.events.indexOf(p.e)}`, p.cls, esc(p.text), [xy.x, xy.y - 26 - 30 * smooth(age / 2.6)], smooth(age / 0.2) * (1 - smooth((age - 2) / 0.6)), p.color);
+  }
+  if (zoom > 7.2) for (const c of frame.shut) { const xy = map.project(c.mid); if (onScreen(xy)) placeLabel("cl" + c.closure_id, "closed", `${esc(c.label)} CLOSED`, [xy.x, xy.y - 14], 1); }
+  for (const [k, el] of labelEls) if (!el._seen) { el.remove(); labelEls.delete(k); }
+}
+
+// ---- drawing a moment ---------------------------------------------------------------------------------------------
+let director = true, lastFrame = null;
+function draw(T) {
+  T = clamp(T, 0, DURATION);
+  const tick = tickAt(T);
+  if (director) map.jumpTo(camera(T));
+  const zoom = map.getZoom(), S = unitMeters(zoom, map.getCenter().lat);
+  setSky(dayness(tick));
+  const frame = layers(T, tick, S, zoom);
+  overlay.setProps({ layers: frame.layers });
+  hud(T, tick, frame);
+  labels(T, tick, S, frame, zoom);
+  lastFrame = { T, tick };
+}
+const idle = () => new Promise(res => { map.once("idle", res); map.triggerRepaint(); });
+async function modelsLoaded() {   // the GLBs load asynchronously: a recording must not start before they draw
+  const t0 = performance.now();
+  for (;;) {
+    const ls = (overlay._deck && overlay._deck.layerManager) ? overlay._deck.layerManager.getLayers() : [];
+    const scene = ls.filter(l => l.id.startsWith("trucks-"));
+    if (scene.length === MODEL_KEYS.length && scene.every(l => l.state && l.state.scenegraph)) return;
+    if (performance.now() - t0 > 30000) throw new Error("the truck models did not load in 30 s");
+    draw(Number(Q.get("t") || 0)); await new Promise(r => setTimeout(r, 100));
+  }
+}
+draw(Number(Q.get("t") || 0));
+await modelsLoaded();
+await document.fonts.ready;
+await idle();
+window.cinema = { duration: DURATION, run: RUN_ID, ready: true, segments: SEG.map(s => ({ kind: s.kind, t0: s.t0, t1: s.t1, turn: s.turn })),
+                  async seek(T) { draw(T); await idle(); return lastFrame; }, _map: map, _overlay: overlay };   // the last two for debugging
+
+if (!RECORD) {   // the interactive player
+  $("controls").hidden = false;
+  $("runpick").innerHTML = RUNS.filter(r => r.model).map(r => `<option value="${esc(r.id)}"${r.id === RUN_ID ? " selected" : ""}>${esc(r.task)} · ${esc(r.model.replace(/^anthropic\//, ""))}</option>`).join("");
+  $("runpick").onchange = e => { location.search = `?run=${encodeURIComponent(e.target.value)}`; };
+  let T = Number(Q.get("t") || 0), playing = !Q.has("paused"), speed = 1, last = performance.now();
+  const setPlay = p => { playing = p; $("play").textContent = p ? "❚❚" : "▶"; };
+  setPlay(playing);
+  $("play").onclick = () => setPlay(!playing);
+  $("speed").onchange = e => { speed = Number(e.target.value); };
+  $("cammode").onchange = e => { director = e.target.value === "director"; };
+  $("seek").oninput = e => { T = e.target.value / 1000 * DURATION; draw(T); };
+  addEventListener("keydown", e => { if (e.code === "Space") { setPlay(!playing); e.preventDefault(); } if (e.code === "ArrowRight") T += 5; if (e.code === "ArrowLeft") T -= 5; });
+  const loop = now => {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (playing) { T = Math.min(DURATION, T + dt * speed); if (T >= DURATION) setPlay(false); }
+    draw(T); $("seek").value = Math.round(T / DURATION * 1000);
+    $("tlabel").textContent = `${Math.floor(T / 60)}:${String(Math.floor(T % 60)).padStart(2, "0")} / ${Math.floor(DURATION / 60)}:${String(Math.floor(DURATION % 60)).padStart(2, "0")}`;
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

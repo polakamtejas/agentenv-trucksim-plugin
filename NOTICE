@@ -1,0 +1,36 @@
+TruckSimEnv on AgentEnv
+Copyright 2026 Scale AI
+Code licensed under Apache-2.0 (LICENSE). The data pack's files keep their sources' terms, below.
+
+The data pack (data/) is built by scripts/build_data.py from these sources; data/manifest.json records each file's
+inputs, URLs, retrieval times and sha256.
+
+- data/roads.json: road distances and geometry from OpenStreetMap via the OSRM demo server, (c) OpenStreetMap
+  contributors, under the Open Database License (ODbL) 1.0. roads.json is a derived database under the ODbL. City
+  points from the U.S. Census Bureau Gazetteer Files 2023 (public domain).
+- data/diesel.json: U.S. Energy Information Administration, weekly retail on-highway No. 2 diesel prices, PADD 2 and 3
+  (public domain; source: EIA).
+- data/freight.json: Freight Analysis Framework 5.7.1 (FHWA/BTS, Oak Ridge National Laboratory), regional database
+  2018-2024 (public domain).
+- data/weather.json: NOAA National Centers for Environmental Information, Storm Events Database, 2019-2025 (public domain).
+- data/hos.json: 49 CFR 395.3, from the eCFR (public domain).
+- data/costs.json: FHWA Highway Statistics 2023, Table VM-1, and BLS Occupational Employment and Wage Statistics,
+  SOC 53-3032 (public domain); entries marked "assumption" have no fetched source.
+
+- data/road_shapes.json: the same OSRM routes' full shapes, for the 3D viewer (ODbL, as roads.json).
+
+The 3D viewer (src/agentenv_trucksim/viewer/cinema.html) uses:
+- deck.gl 9.4.0 and @deck.gl/maplibre 9.4.0 (MIT, vis.gl contributors) and MapLibre GL JS 6.14.0 (BSD-3-Clause,
+  MapLibre contributors), vendored in viewer/vendor/ with their licences.
+- Kenney's Car Kit 3.1 (CC0 1.0, www.kenney.nl): the box truck, van, wheels and palette of viewer/models/, built by
+  scripts/build_models.py, which also assembles the semi from boxes on Kenney's palette.
+- At view time, map tiles from OpenFreeMap (OpenMapTiles schema, (c) OpenStreetMap contributors, ODbL) and terrain
+  from the Mapzen terrain tiles on AWS Open Data; the page shows their attribution.
+The trailer (viewer/trailer.html) also draws, at view time, USGS The National Map's orthoimagery (USGSImageryOnly,
+public domain) and OpenStreetMap's buildings from OpenFreeMap's tiles (ODbL).
+
+The env server builds on agentenv-game-env (Apache-2.0, https://github.com/earakely-scale/agentenv-game-env) and the
+AgentEnv Framework (Apache-2.0, https://github.com/scaleapi/agentenv-framework).
+
+This project is independent: none of the agencies, data providers or projects named here is affiliated with it or
+endorses it.

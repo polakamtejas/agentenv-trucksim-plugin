@@ -1,0 +1,27 @@
+# Project manifest. `tools/build_index.py` renders the root README table from it.
+name: trucksimenv
+title: "TruckSimEnv v1.1: a trucking carrier through a real week"
+tagline: "Run a small Texas carrier's dispatch desk through a real week of 2019-2025, its storms and closed roads included, against two re-planner rivals on one load board."
+order: 7.3        # just after airopsenv (7.2)
+status: wip
+authors:
+  - {name: Tejas Polakam, github: polakamtejas, affiliation: Scale AI}
+
+hub:
+  org: {{HF_ORG}}
+  collection: FineEnvs/simulation-rl-envs
+  spaces:
+    - {{HF_SPACE}}
+  datasets:
+    - {{HF_REPO}}
+
+envs:
+  - name: trucksim
+    summary: "Three carriers, each with ten units and twelve drivers at a hub (Dallas, Houston, San Antonio), work one load board for one real week on the Texas Triangle (24 cities, 38 roads), built from EIA diesel, FAF5 freight flows, NOAA Storm Events placed on the roads they hit and the closures their narratives report, and 49 CFR 395 hours of service. The agent is one carrier's operator, in 28 turns of 6 hours, each a fresh conversation; the other two are a rolling CP-SAT re-planner. Graded by the week's profit, 0.2 at a greedy operator and 1.0 at the re-planner, above 1.0 for beating it."
+    backend: python-offline
+    tools: 16   # situation list_loads get_truck get_market get_forecast plan_trip accept_load release_load dispatch list_drivers assign_drivers hire_temp_driver reposition schedule_maintenance handle_breakdown end_turn
+    frameworks:
+      agentenv:
+        transport: http-mcp
+        verified: true
+# Link only: the code, the data and the runs stay in the author's repos (see README.md).

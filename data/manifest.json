@@ -1,0 +1,847 @@
+{
+ "built_from": "data/raw/ (see each entry's inputs); rebuild with scripts/build_data.py build",
+ "assumptions": [
+  "The board (cities, corridors, which cities generate freight) is a design choice in scripts/build_data.py.",
+  "Fort Worth is a waypoint and its freight is Dallas's: FAF5 has one Dallas-Fort Worth zone.",
+  "Waco, College Station, Lufkin, Victoria, Lafayette, Shreveport, Texarkana, Little Rock and Jackson are waypoints: their FAF5 zones are whole states or remainders of states.",
+  "McAllen carries only the Rio Grande Valley ports' share (BTS truck crossings, inbound, used both ways) of FAF zone 489's truck trade with Mexico; its domestic freight is left out.",
+  "A road crosses a county where its line passes within the radius of a circle of the county's land area around its Census internal point.",
+  "Reefer freight is SCTG2 ['03', '05', '07'].",
+  "Road miles and geometry are OSRM's car-profile routes between Census place points; the sim sets truck speeds itself.",
+  "costs.json entries marked 'assumption' have no fetched source yet."
+ ],
+ "road_warnings": [
+  "LFK-SHV: expected US 79, OSRM's main refs are ['US 79 Business', 'TX 315', 'US 259']"
+ ],
+ "files": {
+  "roads.json": {
+   "sha256": "162329955b7ea4d78f6c4d81449bbaa2ae52d4366bf86e8b38a464c6fc6948d0",
+   "sources": [
+    {
+     "name": "U.S. Census Bureau, Gazetteer Files 2023",
+     "licence": "public domain (U.S. Government work)"
+    },
+    {
+     "name": "OpenStreetMap via the OSRM demo server (router.project-osrm.org), car profile",
+     "licence": "ODbL 1.0: (c) OpenStreetMap contributors; data/roads.json is a derived database under ODbL"
+    }
+   ],
+   "inputs": [
+    {
+     "file": "census_places_2023.zip",
+     "bytes": 1220953,
+     "retrieved_utc": "2026-10-20T21:54:19Z",
+     "sha256": "3c8b23c0dcdb15c0ebd16fee7373e032466e6b585650aa219bc1bee5ac8bd58f",
+     "url": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_place_national.zip"
+    },
+    {
+     "file": "census_counties_2023.zip",
+     "bytes": 141650,
+     "retrieved_utc": "2026-10-20T21:54:19Z",
+     "sha256": "919df59ba90759cce85468c0337e898e4b39c08eaffce86ddd88fa41f1f7f0c8",
+     "url": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_counties_national.zip"
+    },
+    {
+     "file": "osrm/LAR-SA.json",
+     "bytes": 68594,
+     "retrieved_utc": "2026-10-20T21:54:27Z",
+     "sha256": "0bc099e6e41d480901ae069b806db2bc857ff1ba6417d8198cc551ba255ed324",
+     "url": "https://router.project-osrm.org/route/v1/driving/-99.48918,27.56038;-98.52464,29.46281?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SA-AUS.json",
+     "bytes": 84362,
+     "retrieved_utc": "2026-10-20T21:54:28Z",
+     "sha256": "544cc5ebc69c80e2a13234d2113f57e3a647c2a6c452660e2e0f090068684b5a",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.52464,29.46281;-97.75413,30.29862?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/AUS-WAC.json",
+     "bytes": 74966,
+     "retrieved_utc": "2026-10-20T21:54:30Z",
+     "sha256": "e1ce2b6876973af48de28dd0429bce7ac0c6f4f1d99d34849ff15fcf41ef60c0",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.75413,30.29862;-97.18975,31.55799?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/WAC-DAL.json",
+     "bytes": 80936,
+     "retrieved_utc": "2026-10-20T21:54:31Z",
+     "sha256": "9c2b90ccf62288ae978aaeb6210060f279fdab217dd84a52374b9973c5537e4d",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.18975,31.55799;-96.76651,32.79333?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/WAC-FTW.json",
+     "bytes": 67441,
+     "retrieved_utc": "2026-10-21T18:16:54Z",
+     "sha256": "365ef0fc29fa439ba085138c115fe76eec50e0f9fb6f8f8f026a82ac61f6f076",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.18975,31.55799;-97.34857,32.78195?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-FTW.json",
+     "bytes": 43885,
+     "retrieved_utc": "2026-10-21T18:16:56Z",
+     "sha256": "4eda2cf31cc03879d39843e14d106ed60883f6d2ce88d6866986261df039cbfb",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-97.34857,32.78195?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-OKC.json",
+     "bytes": 137364,
+     "retrieved_utc": "2026-10-20T21:54:33Z",
+     "sha256": "23ecd2f3139b2e4825de5acd8e7012281ec9a8da4edf52bfc59a504a22d87026",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-97.51366,35.46708?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SA-CRP.json",
+     "bytes": 80275,
+     "retrieved_utc": "2026-10-20T21:54:34Z",
+     "sha256": "a652fb80eabc60e14331a6089fefd8aa125be6ba72c20c472dd0e53e7404956a",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.52464,29.46281;-97.17338,27.75425?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/HOU-VCT.json",
+     "bytes": 87867,
+     "retrieved_utc": "2026-10-21T18:16:57Z",
+     "sha256": "857b924c7a7d7a42ba7bda0d5098ccb028ea75bf779456df192ae1462d634e24",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.38881,29.78574;-96.98601,28.82853?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/VCT-CRP.json",
+     "bytes": 72277,
+     "retrieved_utc": "2026-10-21T18:16:59Z",
+     "sha256": "6eaeb32831f1007fe3a214999fbef13802a9966e5e91510b55844bfb708d0426",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.98601,28.82853;-97.17338,27.75425?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SA-VCT.json",
+     "bytes": 137281,
+     "retrieved_utc": "2026-10-21T18:17:00Z",
+     "sha256": "9b5cfce993ba3ebf53c72c140c3a163ef79ff9a74bdec3686fa978bc95fe2eb7",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.52464,29.46281;-96.98601,28.82853?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SA-HOU.json",
+     "bytes": 89836,
+     "retrieved_utc": "2026-10-20T21:54:37Z",
+     "sha256": "bbb447b4ae46969f1d2cda8e5a0804ac7805e878b618f8aaa80d439ad3d30ec2",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.52464,29.46281;-95.38881,29.78574?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/HOU-BMT.json",
+     "bytes": 53284,
+     "retrieved_utc": "2026-10-20T21:54:38Z",
+     "sha256": "80772e0c7ed507310ebb6825ed4dbc56b2c651e4f4ce7a67009f67486feda9de",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.38881,29.78574;-94.14533,30.08491?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/BMT-LCH.json",
+     "bytes": 35540,
+     "retrieved_utc": "2026-10-21T18:17:02Z",
+     "sha256": "ee6fe4bed58def8d101dc6029da8262ad23f6dd1941009b8a458103125b55f52",
+     "url": "https://router.project-osrm.org/route/v1/driving/-94.14533,30.08491;-93.21084,30.19902?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LCH-LFT.json",
+     "bytes": 39912,
+     "retrieved_utc": "2026-10-21T18:17:03Z",
+     "sha256": "54c111ee0d30dcdca6d044eb1333a58c8f81c2046c381dc3f45f7917e685e601",
+     "url": "https://router.project-osrm.org/route/v1/driving/-93.21084,30.19902;-92.02806,30.20560?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LFT-BTR.json",
+     "bytes": 38707,
+     "retrieved_utc": "2026-10-21T18:17:05Z",
+     "sha256": "99d28d38cfabcc80123ea0a27b596caf54bd5cbc9050d0379c42240c388dc958",
+     "url": "https://router.project-osrm.org/route/v1/driving/-92.02806,30.20560;-91.13317,30.44044?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/BTR-NOL.json",
+     "bytes": 54785,
+     "retrieved_utc": "2026-10-20T21:54:41Z",
+     "sha256": "036f3d309f0c5f0dacf5fa9bb71fa7cbe6c6b5a27f7b4cbad16c62939bfaccbc",
+     "url": "https://router.project-osrm.org/route/v1/driving/-91.13317,30.44044;-89.93450,30.05342?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/MFE-SA.json",
+     "bytes": 142412,
+     "retrieved_utc": "2026-10-21T18:17:06Z",
+     "sha256": "0ef2eead5b63845f478548517c43be55a68fd1f0c2f436f2aba89bd2a078fab3",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.24608,26.22497;-98.52464,29.46281?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/MFE-CRP.json",
+     "bytes": 111839,
+     "retrieved_utc": "2026-10-21T18:18:40Z",
+     "sha256": "be2226bb9d4e46f46a655eac3f4fdb5abd102116b5d371436ab777badc55a23b",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.24608,26.22497;-97.69610,26.19063;-97.17338,27.75425?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/MFE-LAR.json",
+     "bytes": 137345,
+     "retrieved_utc": "2026-10-21T18:17:09Z",
+     "sha256": "bf25f2e1b0fbf0f0569c6bca6ba5c8e354dac297a625175fdaa73acfa33aa857",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.24608,26.22497;-99.48918,27.56038?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/AUS-HOU.json",
+     "bytes": 164272,
+     "retrieved_utc": "2026-10-21T18:18:41Z",
+     "sha256": "8429f039fc743e554949bbb75f527113f0d84de5e8149152aed072ee2f1804f5",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.75413,30.29862;-96.39774,30.16688;-95.38881,29.78574?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/WAC-BCS.json",
+     "bytes": 67321,
+     "retrieved_utc": "2026-10-21T18:17:12Z",
+     "sha256": "9e66fa64d0dc137cb06f28c345eb48864a845b08b458265937cd0eaf2074e406",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.18975,31.55799;-96.29636,30.58516?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/BCS-HOU.json",
+     "bytes": 77231,
+     "retrieved_utc": "2026-10-21T18:17:13Z",
+     "sha256": "ac8d1c670bfdd013efab7da7f2e359ade6e9742ccbbab8c38df29afb3eb8d875",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.29636,30.58516;-95.38881,29.78574?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-HOU.json",
+     "bytes": 108086,
+     "retrieved_utc": "2026-10-20T21:54:42Z",
+     "sha256": "7ecf8b9f87aac5b6bb63fe1f7a75cd7516f836a59bed04e3b60d105a728cee96",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-95.38881,29.78574?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/HOU-LFK.json",
+     "bytes": 93821,
+     "retrieved_utc": "2026-10-21T18:17:15Z",
+     "sha256": "6e292847ca78e14427767be7c7bfbaa38b651ca6c27050a8ba8b6d39de5c7b66",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.38881,29.78574;-94.72903,31.32290?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LFK-SHV.json",
+     "bytes": 96791,
+     "retrieved_utc": "2026-10-21T18:18:43Z",
+     "sha256": "34147caaddf2235b56ca882396b15ce6831ce5c4f57c2ebe74fe710c94263076",
+     "url": "https://router.project-osrm.org/route/v1/driving/-94.72903,31.32290;-94.33742,32.15738;-93.79219,32.46688?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-TXK.json",
+     "bytes": 73934,
+     "retrieved_utc": "2026-10-20T21:54:44Z",
+     "sha256": "fe339518abebe337d0c5b0844cdf397f612a523753212ac516c9f0ba6ebf7132",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-94.09009,33.45114?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/TXK-LR.json",
+     "bytes": 56409,
+     "retrieved_utc": "2026-10-20T21:54:45Z",
+     "sha256": "d1dd8a1078e7e6a266b94bb0e2c9faf7f2d13e41e3773ef9b16aa19817df4018",
+     "url": "https://router.project-osrm.org/route/v1/driving/-94.09009,33.45114;-92.35856,34.72539?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-SHV.json",
+     "bytes": 74981,
+     "retrieved_utc": "2026-10-20T21:54:47Z",
+     "sha256": "8f92f76a5ec97758be704400704466aa28f96350cfa76481bf9f852801f762e7",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-93.79219,32.46688?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SHV-TXK.json",
+     "bytes": 46859,
+     "retrieved_utc": "2026-10-20T21:54:48Z",
+     "sha256": "dcda75c26e4360e57856edc9c47edf1bd0e92b072014e62a72fc5d084901c851",
+     "url": "https://router.project-osrm.org/route/v1/driving/-93.79219,32.46688;-94.09009,33.45114?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LFT-SHV.json",
+     "bytes": 82547,
+     "retrieved_utc": "2026-10-21T18:17:18Z",
+     "sha256": "d4feed754e944cfe26ba3a02dbbbb6d23b6df0ed6b77b890ec27a22a3fd0b453",
+     "url": "https://router.project-osrm.org/route/v1/driving/-92.02806,30.20560;-93.79219,32.46688?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SHV-JAN.json",
+     "bytes": 78549,
+     "retrieved_utc": "2026-10-21T18:17:19Z",
+     "sha256": "fd1b05d0be1d29d5bbe8dcac878815ccbecef10ec7e1772ee43aa3b843030407",
+     "url": "https://router.project-osrm.org/route/v1/driving/-93.79219,32.46688;-90.21285,32.31583?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LR-MEM.json",
+     "bytes": 71487,
+     "retrieved_utc": "2026-10-20T21:54:49Z",
+     "sha256": "edab55547b2d226fb7eb69d23e4661bf930f13d22ab4afc7a519af89d88cac5b",
+     "url": "https://router.project-osrm.org/route/v1/driving/-92.35856,34.72539;-89.96746,35.10903?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/MEM-JAN.json",
+     "bytes": 66407,
+     "retrieved_utc": "2026-10-21T18:17:20Z",
+     "sha256": "2702466603163453155d74a871c834887f3f792b1c395f10e6e5d7db26d43ed9",
+     "url": "https://router.project-osrm.org/route/v1/driving/-89.96746,35.10903;-90.21285,32.31583?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/JAN-NOL.json",
+     "bytes": 97637,
+     "retrieved_utc": "2026-10-21T18:18:44Z",
+     "sha256": "9c1a811ef211e028ed98fdc4189f15f9f8b63cda294c5947ea1545faf2ea63e8",
+     "url": "https://router.project-osrm.org/route/v1/driving/-90.21285,32.31583;-90.45315,31.24379;-89.93450,30.05342?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/OKC-TUL.json",
+     "bytes": 55280,
+     "retrieved_utc": "2026-10-21T18:17:23Z",
+     "sha256": "489b3ea7001452fcab15bd93eae75d9982ed106bff01b899fd9a74121a896da5",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.51366,35.46708;-95.90232,36.12795?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/TUL-DAL.json",
+     "bytes": 207352,
+     "retrieved_utc": "2026-10-21T18:17:25Z",
+     "sha256": "66deac42a44c5d3474be801abc5201ba5eac2aebe8daceae03e3588025ec41ac",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.90232,36.12795;-96.76651,32.79333?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/TUL-LR.json",
+     "bytes": 112857,
+     "retrieved_utc": "2026-10-21T18:17:26Z",
+     "sha256": "6f98225f13c85960cfbcc70d01e92e5eadd170efb3c796aeb40359a669c049ec",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.90232,36.12795;-92.35856,34.72539?overview=simplified&geometries=geojson&steps=true"
+    }
+   ]
+  },
+  "diesel.json": {
+   "sha256": "69376523d6415617fc13f1908fa1b3b9ffe68ab16ead241d4949e6656719889f",
+   "sources": [
+    {
+     "name": "U.S. Energy Information Administration, weekly retail on-highway No. 2 diesel prices",
+     "licence": "public domain (U.S. Government work); cite EIA"
+    }
+   ],
+   "inputs": [
+    {
+     "file": "eia_diesel_padd2.xls",
+     "bytes": 117760,
+     "retrieved_utc": "2026-10-20T21:54:19Z",
+     "sha256": "7a0feffde54a4101c4049ee733d2c5b96da61a7268dc2173bd09ffd349f03091",
+     "url": "https://www.eia.gov/dnav/pet/hist_xls/EMD_EPD2D_PTE_R20_DPGw.xls"
+    },
+    {
+     "file": "eia_diesel_padd3.xls",
+     "bytes": 117248,
+     "retrieved_utc": "2026-10-20T21:54:19Z",
+     "sha256": "ff3dec1536a79d2351217e45e62a495c038ff4be372193fc0c061e1a0ee7f2f1",
+     "url": "https://www.eia.gov/dnav/pet/hist_xls/EMD_EPD2D_PTE_R30_DPGw.xls"
+    }
+   ]
+  },
+  "freight.json": {
+   "sha256": "42aa514bf7db4dbc420136b69280a0abfdaeee3b794ded429731b496c6a2ea36",
+   "sources": [
+    {
+     "name": "FHWA/BTS Freight Analysis Framework 5.7.1 (ORNL), regional database 2018-2024",
+     "licence": "public domain (U.S. Government work)"
+    },
+    {
+     "name": "BTS Border Crossing/Entry Data (data.bts.gov keg4-3bc2), Texas truck crossings by port",
+     "licence": "public domain (U.S. Government work)"
+    }
+   ],
+   "inputs": [
+    {
+     "file": "FAF5.7.1_2018-2024.zip",
+     "bytes": 192428988,
+     "retrieved_utc": "2026-10-20T21:50:12Z",
+     "sha256": "803036bb693a81fdf3e2c4a6d561feb71b102470c1602e9b35e3094e79485b71",
+     "url": "https://faf.ornl.gov/faf5/Data/Download_Files/FAF5.7.1_2018-2024.zip"
+    },
+    {
+     "file": "bts_border_trucks_tx.csv",
+     "bytes": 356959,
+     "retrieved_utc": "2026-10-21T18:16:53Z",
+     "sha256": "984892ef94daec3af597f31b4fc6a0cb5c4b305a42206b1c022ce576ef92d9d1",
+     "url": "https://data.bts.gov/resource/keg4-3bc2.csv?$select=port_name,port_code,border,state,date,measure,value&$where=state%3D%27Texas%27%20AND%20measure%3D%27Trucks%27&$order=date,port_code&$limit=50000"
+    }
+   ]
+  },
+  "weather.json": {
+   "sha256": "9c9a5fdda8b28c04e617b2f915881fc73646149151d2491cb96b4cb4e766a08e",
+   "sources": [
+    {
+     "name": "NOAA NCEI Storm Events Database, details files",
+     "licence": "public domain (U.S. Government work)"
+    },
+    {
+     "name": "U.S. Census Bureau, Gazetteer Files 2023",
+     "licence": "public domain (U.S. Government work)"
+    }
+   ],
+   "inputs": [
+    {
+     "file": "noaa_storm_details_2019.csv.gz",
+     "bytes": 11602648,
+     "retrieved_utc": "2026-10-20T21:54:22Z",
+     "sha256": "f5043ecc776818b0feffdf1e0fcbaf63329db0635eab1057c7b8ba00ef332e3b",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2019_c20260323.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2020.csv.gz",
+     "bytes": 10444606,
+     "retrieved_utc": "2026-10-20T21:54:23Z",
+     "sha256": "895c56fd46991c4d9a135d67558dc4b447a02a2314efac0ace645135b98f9c9d",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2020_c20260323.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2021.csv.gz",
+     "bytes": 10563953,
+     "retrieved_utc": "2026-10-20T21:54:23Z",
+     "sha256": "60c1daf96dbe8eafd48c80df5b70df51a0125ab95d467ee7009a646761d57715",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2021_c20260323.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2022.csv.gz",
+     "bytes": 11817849,
+     "retrieved_utc": "2026-10-20T21:54:24Z",
+     "sha256": "7d6b79d0049a6edec96b061738289daddba90be26fc9afe7b0a6fd617f21452e",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2022_c20260625.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2023.csv.gz",
+     "bytes": 12888092,
+     "retrieved_utc": "2026-10-20T21:54:25Z",
+     "sha256": "713784bed40d9e5a95b1d6240a654f865f3ef97703713105c7b35437270da134",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2023_c20260323.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2024.csv.gz",
+     "bytes": 12693243,
+     "retrieved_utc": "2026-10-20T21:54:25Z",
+     "sha256": "2070b83eccab041b36360ab73645b9a249c3eefc5b92b5b3fc0cbba4d9fcc09c",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2024_c20260728.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2025.csv.gz",
+     "bytes": 12585209,
+     "retrieved_utc": "2026-10-20T21:54:26Z",
+     "sha256": "d9b46b4c6aae554723cadbb9691f3d5258371c02e530ba815d6fe41e4550149f",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2025_c20260819.csv.gz"
+    },
+    {
+     "file": "census_counties_2023.zip",
+     "bytes": 141650,
+     "retrieved_utc": "2026-10-20T21:54:19Z",
+     "sha256": "919df59ba90759cce85468c0337e898e4b39c08eaffce86ddd88fa41f1f7f0c8",
+     "url": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_counties_national.zip"
+    }
+   ]
+  },
+  "closures.json": {
+   "sha256": "cb9233c82cb7f34cb9b47ddcefceab06bffea58341d77178b7dcfa17ad7bbda6",
+   "sources": [
+    {
+     "name": "NOAA NCEI Storm Events Database, details files",
+     "licence": "public domain (U.S. Government work)"
+    }
+   ],
+   "inputs": [
+    {
+     "file": "noaa_storm_details_2019.csv.gz",
+     "bytes": 11602648,
+     "retrieved_utc": "2026-10-20T21:54:22Z",
+     "sha256": "f5043ecc776818b0feffdf1e0fcbaf63329db0635eab1057c7b8ba00ef332e3b",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2019_c20260323.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2020.csv.gz",
+     "bytes": 10444606,
+     "retrieved_utc": "2026-10-20T21:54:23Z",
+     "sha256": "895c56fd46991c4d9a135d67558dc4b447a02a2314efac0ace645135b98f9c9d",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2020_c20260323.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2021.csv.gz",
+     "bytes": 10563953,
+     "retrieved_utc": "2026-10-20T21:54:23Z",
+     "sha256": "60c1daf96dbe8eafd48c80df5b70df51a0125ab95d467ee7009a646761d57715",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2021_c20260323.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2022.csv.gz",
+     "bytes": 11817849,
+     "retrieved_utc": "2026-10-20T21:54:24Z",
+     "sha256": "7d6b79d0049a6edec96b061738289daddba90be26fc9afe7b0a6fd617f21452e",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2022_c20260625.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2023.csv.gz",
+     "bytes": 12888092,
+     "retrieved_utc": "2026-10-20T21:54:25Z",
+     "sha256": "713784bed40d9e5a95b1d6240a654f865f3ef97703713105c7b35437270da134",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2023_c20260323.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2024.csv.gz",
+     "bytes": 12693243,
+     "retrieved_utc": "2026-10-20T21:54:25Z",
+     "sha256": "2070b83eccab041b36360ab73645b9a249c3eefc5b92b5b3fc0cbba4d9fcc09c",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2024_c20260728.csv.gz"
+    },
+    {
+     "file": "noaa_storm_details_2025.csv.gz",
+     "bytes": 12585209,
+     "retrieved_utc": "2026-10-20T21:54:26Z",
+     "sha256": "d9b46b4c6aae554723cadbb9691f3d5258371c02e530ba815d6fe41e4550149f",
+     "url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2025_c20260819.csv.gz"
+    }
+   ]
+  },
+  "hos.json": {
+   "sha256": "88400fa2f8e67ae713d8028fe2e591fb554f0b54b9eec11b57342d755891e95d",
+   "sources": [
+    {
+     "name": "eCFR, 49 CFR 395.3",
+     "licence": "public domain (U.S. Government work)"
+    }
+   ],
+   "inputs": [
+    {
+     "file": "ecfr_49_395.3.xml",
+     "bytes": 2717,
+     "retrieved_utc": "2026-10-20T21:54:20Z",
+     "sha256": "84d88d4f435b4243bde93ae4551e1d4cc00e3f6e1e197fb84bfb1d27cfc259c1",
+     "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-16/title-49.xml?part=395&section=395.3"
+    }
+   ]
+  },
+  "road_shapes.json": {
+   "sha256": "c77638dc72e577d986476d59451bd3de49efb3d81aaf587072f2935af70fd054",
+   "sources": [
+    {
+     "name": "OpenStreetMap via the OSRM demo server (router.project-osrm.org), car profile",
+     "licence": "ODbL 1.0: (c) OpenStreetMap contributors; data/roads.json is a derived database under ODbL"
+    }
+   ],
+   "inputs": [
+    {
+     "file": "osrm/LAR-SA.json",
+     "bytes": 68594,
+     "retrieved_utc": "2026-10-20T21:54:27Z",
+     "sha256": "0bc099e6e41d480901ae069b806db2bc857ff1ba6417d8198cc551ba255ed324",
+     "url": "https://router.project-osrm.org/route/v1/driving/-99.48918,27.56038;-98.52464,29.46281?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SA-AUS.json",
+     "bytes": 84362,
+     "retrieved_utc": "2026-10-20T21:54:28Z",
+     "sha256": "544cc5ebc69c80e2a13234d2113f57e3a647c2a6c452660e2e0f090068684b5a",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.52464,29.46281;-97.75413,30.29862?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/AUS-WAC.json",
+     "bytes": 74966,
+     "retrieved_utc": "2026-10-20T21:54:30Z",
+     "sha256": "e1ce2b6876973af48de28dd0429bce7ac0c6f4f1d99d34849ff15fcf41ef60c0",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.75413,30.29862;-97.18975,31.55799?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/WAC-DAL.json",
+     "bytes": 80936,
+     "retrieved_utc": "2026-10-20T21:54:31Z",
+     "sha256": "9c2b90ccf62288ae978aaeb6210060f279fdab217dd84a52374b9973c5537e4d",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.18975,31.55799;-96.76651,32.79333?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/WAC-FTW.json",
+     "bytes": 67441,
+     "retrieved_utc": "2026-10-21T18:16:54Z",
+     "sha256": "365ef0fc29fa439ba085138c115fe76eec50e0f9fb6f8f8f026a82ac61f6f076",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.18975,31.55799;-97.34857,32.78195?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-FTW.json",
+     "bytes": 43885,
+     "retrieved_utc": "2026-10-21T18:16:56Z",
+     "sha256": "4eda2cf31cc03879d39843e14d106ed60883f6d2ce88d6866986261df039cbfb",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-97.34857,32.78195?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-OKC.json",
+     "bytes": 137364,
+     "retrieved_utc": "2026-10-20T21:54:33Z",
+     "sha256": "23ecd2f3139b2e4825de5acd8e7012281ec9a8da4edf52bfc59a504a22d87026",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-97.51366,35.46708?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SA-CRP.json",
+     "bytes": 80275,
+     "retrieved_utc": "2026-10-20T21:54:34Z",
+     "sha256": "a652fb80eabc60e14331a6089fefd8aa125be6ba72c20c472dd0e53e7404956a",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.52464,29.46281;-97.17338,27.75425?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/HOU-VCT.json",
+     "bytes": 87867,
+     "retrieved_utc": "2026-10-21T18:16:57Z",
+     "sha256": "857b924c7a7d7a42ba7bda0d5098ccb028ea75bf779456df192ae1462d634e24",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.38881,29.78574;-96.98601,28.82853?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/VCT-CRP.json",
+     "bytes": 72277,
+     "retrieved_utc": "2026-10-21T18:16:59Z",
+     "sha256": "6eaeb32831f1007fe3a214999fbef13802a9966e5e91510b55844bfb708d0426",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.98601,28.82853;-97.17338,27.75425?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SA-VCT.json",
+     "bytes": 137281,
+     "retrieved_utc": "2026-10-21T18:17:00Z",
+     "sha256": "9b5cfce993ba3ebf53c72c140c3a163ef79ff9a74bdec3686fa978bc95fe2eb7",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.52464,29.46281;-96.98601,28.82853?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SA-HOU.json",
+     "bytes": 89836,
+     "retrieved_utc": "2026-10-20T21:54:37Z",
+     "sha256": "bbb447b4ae46969f1d2cda8e5a0804ac7805e878b618f8aaa80d439ad3d30ec2",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.52464,29.46281;-95.38881,29.78574?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/HOU-BMT.json",
+     "bytes": 53284,
+     "retrieved_utc": "2026-10-20T21:54:38Z",
+     "sha256": "80772e0c7ed507310ebb6825ed4dbc56b2c651e4f4ce7a67009f67486feda9de",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.38881,29.78574;-94.14533,30.08491?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/BMT-LCH.json",
+     "bytes": 35540,
+     "retrieved_utc": "2026-10-21T18:17:02Z",
+     "sha256": "ee6fe4bed58def8d101dc6029da8262ad23f6dd1941009b8a458103125b55f52",
+     "url": "https://router.project-osrm.org/route/v1/driving/-94.14533,30.08491;-93.21084,30.19902?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LCH-LFT.json",
+     "bytes": 39912,
+     "retrieved_utc": "2026-10-21T18:17:03Z",
+     "sha256": "54c111ee0d30dcdca6d044eb1333a58c8f81c2046c381dc3f45f7917e685e601",
+     "url": "https://router.project-osrm.org/route/v1/driving/-93.21084,30.19902;-92.02806,30.20560?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LFT-BTR.json",
+     "bytes": 38707,
+     "retrieved_utc": "2026-10-21T18:17:05Z",
+     "sha256": "99d28d38cfabcc80123ea0a27b596caf54bd5cbc9050d0379c42240c388dc958",
+     "url": "https://router.project-osrm.org/route/v1/driving/-92.02806,30.20560;-91.13317,30.44044?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/BTR-NOL.json",
+     "bytes": 54785,
+     "retrieved_utc": "2026-10-20T21:54:41Z",
+     "sha256": "036f3d309f0c5f0dacf5fa9bb71fa7cbe6c6b5a27f7b4cbad16c62939bfaccbc",
+     "url": "https://router.project-osrm.org/route/v1/driving/-91.13317,30.44044;-89.93450,30.05342?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/MFE-SA.json",
+     "bytes": 142412,
+     "retrieved_utc": "2026-10-21T18:17:06Z",
+     "sha256": "0ef2eead5b63845f478548517c43be55a68fd1f0c2f436f2aba89bd2a078fab3",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.24608,26.22497;-98.52464,29.46281?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/MFE-CRP.json",
+     "bytes": 111839,
+     "retrieved_utc": "2026-10-21T18:18:40Z",
+     "sha256": "be2226bb9d4e46f46a655eac3f4fdb5abd102116b5d371436ab777badc55a23b",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.24608,26.22497;-97.69610,26.19063;-97.17338,27.75425?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/MFE-LAR.json",
+     "bytes": 137345,
+     "retrieved_utc": "2026-10-21T18:17:09Z",
+     "sha256": "bf25f2e1b0fbf0f0569c6bca6ba5c8e354dac297a625175fdaa73acfa33aa857",
+     "url": "https://router.project-osrm.org/route/v1/driving/-98.24608,26.22497;-99.48918,27.56038?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/AUS-HOU.json",
+     "bytes": 164272,
+     "retrieved_utc": "2026-10-21T18:18:41Z",
+     "sha256": "8429f039fc743e554949bbb75f527113f0d84de5e8149152aed072ee2f1804f5",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.75413,30.29862;-96.39774,30.16688;-95.38881,29.78574?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/WAC-BCS.json",
+     "bytes": 67321,
+     "retrieved_utc": "2026-10-21T18:17:12Z",
+     "sha256": "9e66fa64d0dc137cb06f28c345eb48864a845b08b458265937cd0eaf2074e406",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.18975,31.55799;-96.29636,30.58516?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/BCS-HOU.json",
+     "bytes": 77231,
+     "retrieved_utc": "2026-10-21T18:17:13Z",
+     "sha256": "ac8d1c670bfdd013efab7da7f2e359ade6e9742ccbbab8c38df29afb3eb8d875",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.29636,30.58516;-95.38881,29.78574?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-HOU.json",
+     "bytes": 108086,
+     "retrieved_utc": "2026-10-20T21:54:42Z",
+     "sha256": "7ecf8b9f87aac5b6bb63fe1f7a75cd7516f836a59bed04e3b60d105a728cee96",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-95.38881,29.78574?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/HOU-LFK.json",
+     "bytes": 93821,
+     "retrieved_utc": "2026-10-21T18:17:15Z",
+     "sha256": "6e292847ca78e14427767be7c7bfbaa38b651ca6c27050a8ba8b6d39de5c7b66",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.38881,29.78574;-94.72903,31.32290?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LFK-SHV.json",
+     "bytes": 96791,
+     "retrieved_utc": "2026-10-21T18:18:43Z",
+     "sha256": "34147caaddf2235b56ca882396b15ce6831ce5c4f57c2ebe74fe710c94263076",
+     "url": "https://router.project-osrm.org/route/v1/driving/-94.72903,31.32290;-94.33742,32.15738;-93.79219,32.46688?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-TXK.json",
+     "bytes": 73934,
+     "retrieved_utc": "2026-10-20T21:54:44Z",
+     "sha256": "fe339518abebe337d0c5b0844cdf397f612a523753212ac516c9f0ba6ebf7132",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-94.09009,33.45114?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/TXK-LR.json",
+     "bytes": 56409,
+     "retrieved_utc": "2026-10-20T21:54:45Z",
+     "sha256": "d1dd8a1078e7e6a266b94bb0e2c9faf7f2d13e41e3773ef9b16aa19817df4018",
+     "url": "https://router.project-osrm.org/route/v1/driving/-94.09009,33.45114;-92.35856,34.72539?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/DAL-SHV.json",
+     "bytes": 74981,
+     "retrieved_utc": "2026-10-20T21:54:47Z",
+     "sha256": "8f92f76a5ec97758be704400704466aa28f96350cfa76481bf9f852801f762e7",
+     "url": "https://router.project-osrm.org/route/v1/driving/-96.76651,32.79333;-93.79219,32.46688?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SHV-TXK.json",
+     "bytes": 46859,
+     "retrieved_utc": "2026-10-20T21:54:48Z",
+     "sha256": "dcda75c26e4360e57856edc9c47edf1bd0e92b072014e62a72fc5d084901c851",
+     "url": "https://router.project-osrm.org/route/v1/driving/-93.79219,32.46688;-94.09009,33.45114?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LFT-SHV.json",
+     "bytes": 82547,
+     "retrieved_utc": "2026-10-21T18:17:18Z",
+     "sha256": "d4feed754e944cfe26ba3a02dbbbb6d23b6df0ed6b77b890ec27a22a3fd0b453",
+     "url": "https://router.project-osrm.org/route/v1/driving/-92.02806,30.20560;-93.79219,32.46688?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/SHV-JAN.json",
+     "bytes": 78549,
+     "retrieved_utc": "2026-10-21T18:17:19Z",
+     "sha256": "fd1b05d0be1d29d5bbe8dcac878815ccbecef10ec7e1772ee43aa3b843030407",
+     "url": "https://router.project-osrm.org/route/v1/driving/-93.79219,32.46688;-90.21285,32.31583?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/LR-MEM.json",
+     "bytes": 71487,
+     "retrieved_utc": "2026-10-20T21:54:49Z",
+     "sha256": "edab55547b2d226fb7eb69d23e4661bf930f13d22ab4afc7a519af89d88cac5b",
+     "url": "https://router.project-osrm.org/route/v1/driving/-92.35856,34.72539;-89.96746,35.10903?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/MEM-JAN.json",
+     "bytes": 66407,
+     "retrieved_utc": "2026-10-21T18:17:20Z",
+     "sha256": "2702466603163453155d74a871c834887f3f792b1c395f10e6e5d7db26d43ed9",
+     "url": "https://router.project-osrm.org/route/v1/driving/-89.96746,35.10903;-90.21285,32.31583?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/JAN-NOL.json",
+     "bytes": 97637,
+     "retrieved_utc": "2026-10-21T18:18:44Z",
+     "sha256": "9c1a811ef211e028ed98fdc4189f15f9f8b63cda294c5947ea1545faf2ea63e8",
+     "url": "https://router.project-osrm.org/route/v1/driving/-90.21285,32.31583;-90.45315,31.24379;-89.93450,30.05342?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/OKC-TUL.json",
+     "bytes": 55280,
+     "retrieved_utc": "2026-10-21T18:17:23Z",
+     "sha256": "489b3ea7001452fcab15bd93eae75d9982ed106bff01b899fd9a74121a896da5",
+     "url": "https://router.project-osrm.org/route/v1/driving/-97.51366,35.46708;-95.90232,36.12795?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/TUL-DAL.json",
+     "bytes": 207352,
+     "retrieved_utc": "2026-10-21T18:17:25Z",
+     "sha256": "66deac42a44c5d3474be801abc5201ba5eac2aebe8daceae03e3588025ec41ac",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.90232,36.12795;-96.76651,32.79333?overview=simplified&geometries=geojson&steps=true"
+    },
+    {
+     "file": "osrm/TUL-LR.json",
+     "bytes": 112857,
+     "retrieved_utc": "2026-10-21T18:17:26Z",
+     "sha256": "6f98225f13c85960cfbcc70d01e92e5eadd170efb3c796aeb40359a669c049ec",
+     "url": "https://router.project-osrm.org/route/v1/driving/-95.90232,36.12795;-92.35856,34.72539?overview=simplified&geometries=geojson&steps=true"
+    }
+   ]
+  },
+  "costs.json": {
+   "sha256": "f7b66e7be409042d5c63cb7ca80ad16acef5a252689dcd115f4dfcfc3e9e3d7b",
+   "sources": [
+    {
+     "name": "FHWA Highway Statistics 2023, Table VM-1",
+     "licence": "public domain (U.S. Government work)"
+    },
+    {
+     "name": "BLS Occupational Employment and Wage Statistics, SOC 53-3032 Heavy and Tractor-Trailer Truck Drivers and 53-3033 Light Truck Drivers, national",
+     "licence": "public domain (U.S. Government work)"
+    },
+    {
+     "name": "ATRI, An Analysis of the Operational Costs of Trucking: 2024 Update (June 2024)",
+     "licence": "(c) American Transportation Research Institute; figures cited from it, the report is not redistributed (data/raw is git-ignored)"
+    }
+   ],
+   "inputs": [
+    {
+     "file": "fhwa_vm1_2023.html",
+     "bytes": 27924,
+     "retrieved_utc": "2026-10-20T21:54:20Z",
+     "sha256": "6a67f0e31c30884ad299489947ecd5ce3121801b958d440393510caef3a0636a",
+     "url": "https://www.fhwa.dot.gov/policyinformation/statistics/2023/vm1.cfm"
+    },
+    {
+     "file": "bls_hourly_mean.json",
+     "bytes": 375,
+     "retrieved_utc": "2026-10-20T21:54:21Z",
+     "sha256": "3b18c60fe539ba88051b3c8297333cb58839b0359d703d94001183af114eb3a5",
+     "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/OEUN000000000000053303203"
+    },
+    {
+     "file": "bls_annual_mean.json",
+     "bytes": 375,
+     "retrieved_utc": "2026-10-20T21:54:21Z",
+     "sha256": "9145c21f62fdc6232246968d6d21faa61bc8bba67b038f34424c403751cb7e46",
+     "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/OEUN000000000000053303204"
+    },
+    {
+     "file": "bls_light_hourly_mean.json",
+     "bytes": 374,
+     "retrieved_utc": "2026-10-21T19:45:08Z",
+     "sha256": "39972da2ee92ce4915253764344f19e68a136dcd9e697e216d5b4f568d6383f9",
+     "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/OEUN000000000000053303303"
+    },
+    {
+     "file": "atri_operational_costs_2024.pdf",
+     "bytes": 3250743,
+     "retrieved_utc": "2026-10-21T22:11:51Z",
+     "sha256": "1a639eef7fc215dacadba06994cbe3006987bdc9f541075c5f6855487be20435",
+     "url": "https://truckingresearch.org/wp-content/uploads/2024/06/ATRI-Operational-Cost-of-Trucking-06-2024.pdf"
+    }
+   ]
+  }
+ }
+}

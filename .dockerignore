@@ -1,0 +1,7 @@
+.git
+.venv
+.agentenv
+data/raw
+tests
+design
+**/__pycache__

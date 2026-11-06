@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TruckSim runs</title>
+<style>
+/* The look follows PortSimEnv on AgentEnv's replay viewer (earakely-scale/agentenv-portsim-plugin): warm grays, hairline
+   rules, a dark stage with glass controls. Seats take the dataviz palette's categorical slots 1-3 (validated all-pairs,
+   light and dark); a truck's state is its shape and an icon on the map, and its own fill in the fleet chart. */
+:root {
+  --bg: #fbfaf8; --fg: #1e1e1e; --muted: #6c6a66; --faint: #a29f99; --line: #e4e1db; --line2: #efede8; --hover: #f3f1ec;
+  --sel: #ebe7de; --red: #b8322a; --ok: #3d8a5c; --warn: #c58a1d; --now: #e8602c; --band: #f4f2ee; --gridc: #e9e6e0;
+  --seat-A: #2a78d6; --seat-B: #eb6834; --seat-C: #1baf7a;
+  --st-rest: #c9c6bf; --st-stop: #e2dfd8; --st-det: #e0ab4a; --st-broken: #d1281c;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --bg: #141414; --fg: #e6e4e0; --muted: #9b9892; --faint: #6d6a65; --line: #2c2b29; --line2: #232220; --hover: #1f1e1c;
+    --sel: #2a2825; --red: #e0675d; --ok: #6cbf8a; --warn: #e0ab4a; --now: #f07440; --band: #1b1a19; --gridc: #262523;
+    --seat-A: #3987e5; --seat-B: #d95926; --seat-C: #199e70; --st-rest: #3a3936; --st-stop: #2c2b29; --st-det: #b8892f; --st-broken: #ff5a4c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141414; --fg: #e6e4e0; --muted: #9b9892; --faint: #6d6a65; --line: #2c2b29; --line2: #232220; --hover: #1f1e1c;
+  --sel: #2a2825; --red: #e0675d; --ok: #6cbf8a; --warn: #e0ab4a; --now: #f07440; --band: #1b1a19; --gridc: #262523;
+  --seat-A: #3987e5; --seat-B: #d95926; --seat-C: #199e70; --st-rest: #3a3936; --st-stop: #2c2b29; --st-det: #b8892f; --st-broken: #ff5a4c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; } [hidden] { display: none !important; }
+html, body { margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--fg); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 2px; } a:hover { text-decoration-color: currentColor; }
+h1, h2 { margin: 0; font-weight: 600; } h1 { font-size: 15px; } h2 { font-size: 13px; }
+.muted { color: var(--muted); } .small { font-size: 12px; } .num { font-variant-numeric: tabular-nums; }
+button, select, input { font: inherit; color: inherit; }
+header.top { height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+header.top .brand { font-weight: 600; text-decoration: none; } header.top .sub { font-size: 12px; color: var(--muted); }
+header.top nav { display: flex; gap: 14px; margin-left: 14px; font-size: 13px; }
+header.top nav a { text-decoration: none; color: var(--muted); } header.top nav a.on { color: var(--fg); font-weight: 600; }
+.crumbs { margin-left: auto; display: flex; gap: 6px; min-width: 0; overflow: hidden; font-size: 12px; color: var(--muted); } .crumbs .sep { color: var(--faint); }
+.themebtn { border: 1px solid var(--line); background: transparent; border-radius: 3px; height: 24px; padding: 0 8px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.page { padding: 0 0 32px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 10px 16px 9px; border-bottom: 1px solid var(--line); }
+.page-head .meta { font-size: 12px; color: var(--muted); }
+.page-head .play3d { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--fg); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; }
+.page-head .play3d:hover { background: var(--sel); }
+section { min-width: 0; } .sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 6px; }
+.kv { display: grid; grid-template-columns: minmax(130px, max-content) 1fr; gap: 3px 16px; margin: 0; font-variant-numeric: tabular-nums; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; min-width: 0; } .kv dt[title] { cursor: help; text-decoration: underline dotted var(--faint); text-underline-offset: 3px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.ok { background: var(--ok); } .bad { background: var(--red); }
+.btn { height: 26px; padding: 0 9px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 3px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--faint); }
+table.t { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+table.t th, table.t td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line2); white-space: nowrap; }
+table.t th { color: var(--muted); font-weight: 500; border-bottom-color: var(--line); } table.t td.r, table.t th.r { text-align: right; }
+table.t tbody tr:hover { background: var(--hover); } table.t tr.click { cursor: pointer; }
+/* overview */
+.ov-page { max-width: 1180px; padding: 16px; }
+.ov-page h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+.ov-page p { max-width: 780px; color: var(--muted); margin: 6px 0; font-size: 14px; } .ov-page p b { color: var(--fg); }
+.glossary { margin: 10px 0 0; padding-left: 18px; color: var(--muted); } .glossary li { margin: 3px 0; } .glossary b { color: var(--fg); }
+.start { margin: 20px 0; padding: 10px 12px; border-left: 3px solid var(--warn); background: var(--hover); }
+.ov-page h2 { margin: 22px 0 4px; } .ov-page .note { color: var(--muted); font-size: 12px; margin: 2px 0 8px; max-width: 900px; }
+.steps { margin: 6px 0 0; padding-left: 20px; max-width: 820px; color: var(--muted); font-size: 14px; } .steps li { margin: 5px 0; } .steps b, .findings b { color: var(--fg); }
+.findings { margin: 6px 0 0; padding-left: 18px; max-width: 860px; font-size: 14px; color: var(--muted); } .findings li { margin: 4px 0; }
+.tag { font-size: 10.5px; padding: 1px 6px; border-radius: 9px; background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--fg); }
+details.more { margin: 10px 0; } details.more summary { cursor: pointer; color: var(--muted); font-size: 12.5px; } details.more[open] summary { margin-bottom: 6px; }
+.links { display: grid; grid-template-columns: max-content 1fr; gap: 3px 16px; margin-top: 14px; color: var(--muted); }
+/* run page */
+.ro-grid { display: grid; grid-template-columns: minmax(360px, 38%) minmax(0, 1fr); gap: 0; align-items: start; }
+.ro-left { padding: 10px 16px 0; min-width: 0; } .ro-left > section + section { margin-top: 18px; }
+.ro-right { position: sticky; top: 0; min-width: 0; border-left: 1px solid var(--line); }
+.watch { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
+.watch-h { margin: 12px 0 4px; padding: 4px 8px; border-left: 3px solid var(--warn); background: var(--hover); font-size: 12px; font-weight: 600; }
+.feed, .msgs { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12px; }
+.feed li, .msgs li { padding: 3px 6px; border-left: 3px solid var(--line); margin-bottom: 3px; }
+.feed li.new { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.feed .t { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+.msgs code { font: 11.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.msgs .res { color: var(--muted); white-space: pre-wrap; word-break: break-word; display: block; }
+.msgs li.say { border-left-color: var(--faint); font-style: italic; color: var(--muted); }
+.msgs li.notes { border-left-color: var(--warn); }
+.empty { color: var(--muted); font-size: 12px; padding: 4px 0; }
+.stage { position: relative; height: calc(100vh - 40px - 330px); min-height: 380px; background: #0f1b22; overflow: hidden; }
+.stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ov { position: absolute; z-index: 5; display: flex; gap: 6px; align-items: center; color: #e4edf1; font-size: 12px; }
+.ov-tl { top: 10px; left: 10px; flex-wrap: wrap; } .ov-tr { top: 10px; right: 10px; }
+.ovbox, .ovb, .ovs { background: rgba(13, 30, 40, .82); color: #e4edf1; border: 1px solid #c3ddea26; border-radius: 6px; box-shadow: 0 3px 12px #09202c18; height: 30px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.ovbox { display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; white-space: nowrap; }
+.ovb { cursor: pointer; padding: 0 10px; display: inline-flex; align-items: center; white-space: nowrap; }
+.ovb:hover, .ovb[aria-pressed="true"] { background: rgba(28, 57, 70, .94); border-color: #aac9d34d; } .ovb[aria-pressed="false"] { color: #9fb2b9; }
+.ovs { padding: 0 6px; cursor: pointer; } .ovs option { background: #17313d; color: #e4edf1; }
+.stepnav { padding: 0; gap: 0; } .stepnav .ovb { border: none; box-shadow: none; background: transparent; padding: 0 9px; font-size: 15px; height: 28px; }
+.ovcard { position: absolute; z-index: 5; left: 10px; top: 50px; padding: 10px 12px; background: rgba(13, 30, 40, .86); color: #e4edf1; border: 1px solid #c3ddea26; border-radius: 6px; backdrop-filter: blur(16px); font-size: 12px; width: 250px; }
+.nw { white-space: nowrap; }
+.ring { display: inline-block; width: 8px; height: 8px; border: 2px dashed; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.ovcard .ttl { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #a5bac5; margin-bottom: 4px; }
+.ovcard .big { font-size: 15px; } .ovcard .big b { font-size: 20px; font-weight: 600; } .ovcard .sm { color: #b8c7d3; margin-top: 4px; }
+.scrub { position: absolute; z-index: 6; left: 10px; right: 10px; bottom: 10px; height: 42px; color: #e4edf1; display: flex; align-items: center; gap: 8px; padding: 0 9px; background: rgba(13, 30, 40, .85); border: 1px solid #c3ddea26; border-radius: 8px; backdrop-filter: blur(16px); }
+.scrub .ovb, .scrub .ovs { height: 28px; border-color: transparent; background: #d6ecf00a; }
+.scrub .play { width: 34px; justify-content: center; padding: 0; }
+.scrub .range { flex: 1; min-width: 60px; accent-color: var(--now); height: 18px; margin: 0; }
+.scrub .clock { display: flex; flex-direction: column; line-height: 1.15; min-width: 150px; text-align: right; font-variant-numeric: tabular-nums; }
+.scrub .clock b { font-weight: 600; font-size: 12.5px; } .scrub .clock span { font-size: 11px; color: #a5bac5; }
+.attr { position: absolute; z-index: 4; right: 10px; bottom: 58px; font-size: 10px; color: #d6e3e8; background: #122c3b90; padding: 1px 6px; border-radius: 3px; }
+.chart-sec { padding: 10px 16px 6px; border-top: 1px solid var(--line); }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; } .legend i { width: 12px; height: 9px; display: inline-block; border-radius: 2px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 0; } .two > .chart-sec + .chart-sec { border-left: 1px solid var(--line); }
+@media (max-width: 1100px) { .ro-grid, .two { grid-template-columns: 1fr; } .ro-right { position: static; border-left: 0; } }
+#tip { position: fixed; pointer-events: none; z-index: 50; background: var(--bg); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.18); border-radius: 4px; padding: 6px 9px; font-size: 12px; max-width: 340px; display: none; }
+#tip b { font-weight: 600; }
+svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/">TruckSim runs</a><span class="sub">Texas Triangle</span>
+  <nav><a href="#/" data-tab="overview">Overview</a><a href="#/runs" data-tab="runs">Explorer</a><a id="repo" href="https://github.com/polakamtejas/agentenv-trucksim-plugin" target="_blank" rel="noopener">Run it yourself ↗</a></nav>
+  <div class="crumbs" id="crumbs"></div>
+  <button class="themebtn" id="theme" type="button">Theme</button>
+</header>
+<main id="main"></main>
+<div id="tip"></div>
+<script id="site-data" type="application/json">null</script>
+<script>
+"use strict";
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon"];
+const REVENUE = ["linehaul", "fuel_surcharge", "detention_pay", "tonu_fee", "terminal_in_transit"];
+const STATE = { loaded: "Loaded", empty: "Empty (deadhead)", stopped: "Stopped (dock or idle)", resting: "Resting (HOS)", detention: "Detention", broken: "Broken down", held: "Held by a closed road" };
+const STATE_FILL = { resting: "var(--st-rest)", stopped: "var(--st-stop)", detention: "var(--st-det)", broken: "var(--st-broken)", held: "url(#hatch-held)" };
+const ICON = { detention: "⏱", broken: "⚠", resting: "z", held: "⛔" };
+const UNIT = { tractor_dry: { label: "tractor, 53' dry van", size: 1, tag: "" }, tractor_reefer: { label: "tractor, 53' reefer", size: 1, tag: "" },
+               box: { label: "26' box truck", size: 0.82, tag: " · box" }, van: { label: "cargo van", size: 0.66, tag: " · van" } };
+const unitOf = t => { const u = UNIT[t.class] || { label: t.equipment === "reefer" ? "reefer truck" : "dry van truck", size: 1, tag: "" };   // v1 replays: no class
+  return t.owner === "owner_operator" ? { ...u, label: u.label + ", an owner-operator's", tag: u.tag + " · owner-op" } : u; };
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const money = v => v == null ? "—" : (v < 0 ? "−" : "") + "$" + Math.abs(Math.round(v)).toLocaleString("en-US");
+const fix = (v, d = 3) => v == null ? "—" : Number(v).toFixed(d);
+const clockOf = t => { const d = Math.floor(t / 96), m = (t % 96) * 15; return `${DAYS[Math.min(d, 7)]} ${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+const seatColor = s => `var(--seat-${s})`;
+const shortModel = m => (m || "").split("/").pop();
+const weekOf = task => (String(task).match(/\d{4}-\d{2}-\d{2}/) || [""])[0];   // ts-2019-10-07-A-s16, ts-v11-2019-10-07-A-s16
+const nick = m => shortModel(m).replace(/^claude-/, "");          // where a label has little room: haiku-5-5
+const tip = $("tip");
+const showTip = (h, ev) => { tip.innerHTML = h; tip.style.display = "block"; tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = Math.min(ev.clientY + 14, innerHeight - tip.offsetHeight - 8) + "px"; };
+const hideTip = () => { tip.style.display = "none"; };
+$("theme").addEventListener("click", () => { const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; r.dataset.theme = dark ? "light" : "dark"; localStorage.setItem("trucksim-theme", r.dataset.theme); });
+if (localStorage.getItem("trucksim-theme")) document.documentElement.dataset.theme = localStorage.getItem("trucksim-theme");
+if (new URLSearchParams(location.search).get("theme")) document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme");
+
+// ---------------- data ----------------
+let SITE = JSON.parse($("site-data").textContent);
+const docCache = {};
+async function loadSite() {
+  if (SITE) return SITE;
+  const r = await fetch("site.json");
+  if (!r.ok) throw new Error(`no site.json here (HTTP ${r.status})`);
+  return (SITE = await r.json());
+}
+async function loadDoc(id) {
+  if (SITE.docs && SITE.docs[id]) return SITE.docs[id];
+  if (docCache[id]) return docCache[id];
+  const r = await fetch(`runs/${encodeURIComponent(id)}.json`);
+  if (!r.ok) throw new Error(`no replay for ${id} (HTTP ${r.status})`);
+  return (docCache[id] = await r.json());
+}
+function bootstrap(vals, draws = 2000) {   // a fixed-seed bootstrap over weeks, as the results board computes it
+  let s = 7; const rnd = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const means = []; for (let i = 0; i < draws; i++) { let a = 0; for (let j = 0; j < vals.length; j++) a += vals[Math.floor(rnd() * vals.length)]; means.push(a / vals.length); }
+  means.sort((a, b) => a - b); return [means[Math.floor(0.025 * draws)], means[Math.floor(0.975 * draws) - 1]];
+}
+
+// ---------------- routing ----------------
+let teardown = null;
+async function route() {
+  if (teardown) { teardown(); teardown = null; }
+  hideTip();
+  const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+  document.querySelectorAll("header nav a[data-tab]").forEach(a => a.classList.toggle("on", (parts[0] || "overview") === a.dataset.tab || (parts[0] === "run" && a.dataset.tab === "runs")));
+  const main = $("main");
+  try {
+    if (parts[0] === "live") return await livePage(main, parts[1]);
+    await loadSite();
+    if (!parts.length && (SITE.runs || []).length === 1) return await runPage(main, SITE.runs[0].id);
+    if (!parts.length) return overview(main);
+    if (parts[0] === "runs") return explorer(main);
+    if (parts[0] === "run") return await runPage(main, parts[1]);
+    main.innerHTML = `<div class="ov-page">Nothing at ${esc(location.hash)}.</div>`;
+  } catch (e) { main.innerHTML = `<div class="ov-page"><h1>Couldn't load this page</h1><p>${esc(e.message)}</p></div>`; }
+}
+addEventListener("hashchange", route);
+const crumbs = items => { $("crumbs").innerHTML = items.map((x, i) => (i ? '<span class="sep">/</span>' : "") + (x.href ? `<a href="${x.href}">${esc(x.text)}</a>` : `<span>${esc(x.text)}</span>`)).join(""); };
+
+// ---------------- overview ----------------
+function boardRows(runs) {
+  const by = {};
+  runs.forEach(r => (by[r.model] ||= []).push(r));
+  return Object.entries(by).map(([model, rs]) => {
+    const ok = rs.filter(r => r.reward != null), rew = ok.map(r => r.reward), mean = k => ok.reduce((a, r) => a + (r[k] || 0), 0) / (ok.length || 1);
+    const tok = k => ok.reduce((a, r) => a + ((r.usage || {})[k] || 0), 0) / (ok.length || 1);
+    const [lo, hi] = rew.length > 1 ? bootstrap(rew) : [null, null];
+    return { model, weeks: ok.length, runs: rs.length, reward: rew.reduce((a, b) => a + b, 0) / (rew.length || 1), lo, hi,
+             profit: mean("profit_usd"), loads: mean("delivered"), calls: mean("tool_calls"), tin: tok("input_tokens"), tout: tok("output_tokens"), min: mean("seconds") / 60 };
+  }).sort((a, b) => b.reward - a.reward);
+}
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const niceWeek = monday => { const [y, m, d] = monday.split("-").map(Number); return `${MONTHS[m - 1]} ${d}, ${y}`; };
+const HUBS = { A: "Dallas", B: "Houston", C: "San Antonio" };
+const madeOrLost = v => v < 0 ? `lost ${money(-v)}` : `made ${money(v)}`;
+function ruler(ex) {
+  // A worked example on one real week: where the simple dispatcher, the optimizer and the model land on the score.
+  const pts = [["simple dispatcher", ex.naive_usd, 0.2], ["optimizer", ex.anchor_usd, 1.0], [shortModel(ex.model), ex.profit_usd, ex.reward]];
+  const lo = Math.min(0, ...pts.map(p => p[2])), hi = Math.max(1.2, ...pts.map(p => p[2])) + 0.1, W = 760, L = 40, Rr = 110;
+  const x = s => L + (s - lo) / (hi - lo) * (W - L - Rr);
+  const ticks = [0, 0.2, 0.5, 1.0, 1.5, 2.0].filter(t => t <= hi);
+  const Y = 66;   // labels sit above the line, staggered so close points don't collide; the scale's numbers below
+  return `<svg viewBox="0 0 ${W} 124" width="100%" style="max-width:${W}px;display:block;margin:6px 0 2px" role="img" aria-label="The score as a ruler on one week">
+    <line x1="${x(lo)}" x2="${x(hi)}" y1="${Y}" y2="${Y}" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/>
+    <rect x="${x(0.2)}" y="${Y - 3}" width="${x(1.0) - x(0.2)}" height="6" fill="var(--faint)" opacity=".55"/>
+    ${ticks.map(t => `<line x1="${x(t)}" x2="${x(t)}" y1="${Y + 6}" y2="${Y + 12}" stroke="var(--faint)"/><text x="${x(t)}" y="${Y + 25}" font-size="11" fill="var(--muted)" text-anchor="middle">score ${t.toFixed(1)}</text>`).join("")}
+    ${pts.map(([name, usd, s], i) => `<g transform="translate(${x(s)},${Y})"><line y1="-8" y2="${i === 1 ? -36 : -18}" stroke="var(--faint)"/><circle r="7" fill="${i === 2 ? "var(--now)" : "var(--fg)"}" stroke="var(--bg)" stroke-width="2"/>
+      <text y="${i === 1 ? -40 : -22}" font-size="12" text-anchor="middle" fill="var(--fg)" font-weight="${i === 2 ? 600 : 400}">${esc(name)}: ${money(usd)}</text></g>`).join("")}
+    <text x="${x(lo)}" y="${Y + 48}" font-size="10.5" fill="var(--muted)">0.2 = the simple dispatcher's profit · 1.0 = the optimizer's · above 1.0 = the AI beat the optimizer</text>
+  </svg>`;
+}
+function overview(main) {
+  crumbs([{ text: "Overview" }]);
+  const runs = SITE.runs || [], scored = runs.filter(r => r.reward != null);
+  const best = [...scored].sort((a, b) => b.reward - a.reward)[0];
+  const tasks = [...new Set(runs.map(r => r.task))].sort(), models = [...new Set(runs.map(r => r.model))].sort();
+  const board = boardRows(runs);
+  const stat = m => { const rs = scored.filter(r => r.model === m); return { n: rs.length, beatSimple: rs.filter(r => r.profit_usd > r.naive_usd).length, beatOpt: rs.filter(r => r.profit_usd > r.anchor_usd).length }; };
+  const lead = board[0], second = board[1];
+  const storm = scored.filter(r => r.kind === "storm").sort((a, b) => b.reward - a.reward)[0];
+  const weekRow = t => runs.find(r => r.task === t);
+  const v11 = runs.some(r => /^ts-v11-/.test(r.task));   // the v1.1 world (DESIGN.md "v1.1"); v1's pilot is history
+  main.innerHTML = `<div class="ov-page">
+    <h1>Can an AI run a trucking company?</h1>
+    <p>We give an AI model a small trucking company in Texas, ${v11 ? "ten trucks of four kinds and twelve drivers" : "four trucks and their drivers"}, and one real week from the past: that week's diesel prices and that week's storms. Two rival companies compete for the same jobs. The AI decides which jobs to take and which truck${v11 ? " and driver" : ""} does what, all week. At the end we count the money.</p>
+    <p>It is a test of something most AI benchmarks don't touch: <b>running an operation over time</b>, where every decision affects the next, the rules are real, and things go wrong.</p>
+
+    <h2>The game, in a minute</h2>
+    <ol class="steps">
+      <li><b>One company, one week.</b> The AI is the dispatcher for one of three companies, based in Dallas, Houston or San Antonio. The week runs in 28 turns of 6 hours.</li>
+      <li><b>Every turn,</b> it looks at the load board (jobs posted by shippers: move these goods from here to there, by then, for this price), takes the jobs it wants and tells each truck where to go next.</li>
+      <li><b>The drivers follow the law.</b> U.S. hours-of-service rules limit how long a driver can drive before resting; the game enforces them, so a plan that ignores them fails.</li>
+      ${v11 ? `<li><b>Trucks and drivers come in kinds.</b> Tractor-trailers take full loads, box trucks and a van the small ones, and partial loads can share a trailer. Two drivers run one truck as a team, a spare waits at the hub to take over a tired driver's truck, and two owner-operators drive their own trucks and turn down jobs that don't pay them enough.</li>
+      <li><b>Real storms close real roads.</b> Ice and floods from NOAA's records slow highways and close them; drivers detour or wait it out.</li>` : ""}
+      <li><b>Things go wrong,</b> as they do: trucks break down, shippers keep trucks waiting for hours, storms slow the roads, jobs get cancelled, and a rival may grab the job you wanted.</li>
+      <li><b>Money in, money out.</b> Delivered jobs pay; every mile costs fuel, ${v11 ? "drivers are paid by the mile or the hour, owner-operators a share of each job" : "every hour costs wages"}, every truck costs rent each day, and late deliveries cost penalties.</li>
+    </ol>
+
+    <h2>How we keep score</h2>
+    <p><b>Profit</b> is the money the AI's company made in the week, after every cost. It is what a person cares about, but it can't compare weeks on its own: in a week of ice storms everyone loses money, so losing a little is a triumph, while the same loss in a calm week is poor.</p>
+    <p>So each week also has a <b>score</b> (the reward, in reinforcement-learning terms) that puts the profit on a ruler made for that week: two automatic dispatchers play the same company in the same week first. A <b>simple dispatcher</b> (always grab the best-paying job nearby) sets 0.2, and an <b>optimizer</b> (software that plans every truck with a solver) sets 1.0. There is no perfect answer to compare against, so the ruler keeps going: beating the optimizer scores above 1.0.</p>
+    ${best ? `<div class="note">The ruler on one week: ${esc(niceWeek(best.monday || weekOf(best.task)))}, the ${esc(HUBS[best.seat] || "")} company.</div>${ruler(best)}` : ""}
+
+    ${lead ? `<h2>What we found so far</h2>
+    <ul class="findings">
+      <li><b>${esc(shortModel(lead.model))}</b> leads: an average score of <b>${fix(lead.reward, 2)}</b> and <b>${money(lead.profit)}</b> profit a week${second ? `, against ${esc(shortModel(second.model))}'s ${fix(second.reward, 2)} and ${money(second.profit)}` : ""}.</li>
+      ${models.map(m => { const s = stat(m); return `<li><b>${esc(shortModel(m))}</b> beat the simple dispatcher in ${s.beatSimple} of ${s.n} weeks and the optimizer in ${s.beatOpt}.</li>`; }).join("")}
+      ${storm ? `<li>Storm weeks are hard for everyone: in the week of ${esc(niceWeek(storm.monday || weekOf(storm.task)))}, the simple dispatcher ${madeOrLost(storm.naive_usd)} and the optimizer ${madeOrLost(storm.anchor_usd)}; ${esc(shortModel(storm.model))} ${madeOrLost(storm.profit_usd)}.</li>` : ""}
+      <li>These are ${runs.length} runs over ${tasks.length} weeks: a first look. Results swing a lot from week to week, so the full set of 15 weeks will say more.</li>
+    </ul>` : ""}
+
+    ${best ? `<div class="start"><b>Watch one:</b> ${esc(shortModel(best.model))} runs the ${esc(HUBS[best.seat] || "")} company in the week of ${esc(niceWeek(best.monday || weekOf(best.task)))} and makes ${money(best.profit_usd)}, more than the optimizer's ${money(best.anchor_usd)} (score ${fix(best.reward, 2)}). <a href="#/run/${encodeURIComponent(best.id)}">▶ Replay it</a>: the trucks on the map, the storms, and what the AI did and wrote each turn.</div>` : ""}
+
+    <h2>Leaderboard</h2><div class="note">Averages over the weeks each model played. The range after the score is a 95% confidence interval: with this few weeks, overlapping ranges mean the models aren't clearly apart yet.</div>
+    <table class="t"><thead><tr><th>Model</th><th class="r">Weeks</th><th>Score (95% range)</th><th class="r">Profit a week</th><th class="r">Beat the simple dispatcher</th><th class="r">Beat the optimizer</th><th class="r">Jobs delivered a week</th></tr></thead>
+    <tbody>${board.map(b => { const s = stat(b.model); return `<tr><td>${esc(shortModel(b.model))}</td><td class="r">${b.weeks}</td><td><b>${fix(b.reward, 2)}</b> <span class="muted">(${fix(b.lo, 2)} to ${fix(b.hi, 2)})</span></td><td class="r">${money(b.profit)}</td><td class="r">${s.beatSimple} of ${s.n}</td><td class="r">${s.beatOpt} of ${s.n}</td><td class="r">${b.loads.toFixed(1)}</td></tr>`; }).join("")}</tbody></table>
+    <details class="more"><summary>Cost and effort per week</summary>
+    <table class="t"><thead><tr><th>Model</th><th class="r">Tool calls</th><th class="r">Input tokens</th><th class="r">Output tokens</th><th class="r">Minutes</th></tr></thead>
+    <tbody>${board.map(b => `<tr><td>${esc(shortModel(b.model))}</td><td class="r">${Math.round(b.calls)}</td><td class="r">${Math.round(b.tin).toLocaleString()}</td><td class="r">${Math.round(b.tout).toLocaleString()}</td><td class="r">${b.min.toFixed(1)}</td></tr>`).join("")}</tbody></table></details>
+
+    <h2>Week by week</h2><div class="note">Each cell is a model's score and, in brackets, its profit. Click one to replay that week.</div>
+    <table class="t"><thead><tr><th>Week</th><th>Company</th><th class="r">Simple dispatcher</th><th class="r">Optimizer</th>${models.map(m => `<th class="r">${esc(shortModel(m))}</th>`).join("")}</tr></thead>
+    <tbody>${tasks.map(t => { const w = weekRow(t); return `<tr><td>${esc(niceWeek(w.monday || weekOf(t)))}${w.kind === "storm" ? ' <span class="tag">storms</span>' : ""}</td><td>${esc(HUBS[w.seat] || w.seat)}</td><td class="r">${money(w.naive_usd)}</td><td class="r">${money(w.anchor_usd)}</td>${models.map(m => { const r = runs.find(x => x.task === t && x.model === m); return `<td class="r">${r && r.reward != null ? `<a href="#/run/${encodeURIComponent(r.id)}">${fix(r.reward, 2)}</a> <span class="muted">(${money(r.profit_usd)})</span>` : "—"}</td>`; }).join("")}</tr>`; }).join("")}</tbody></table>
+
+    <details class="more"><summary>The details: rules, data and terms</summary>
+    <ul class="glossary">
+      <li><b>Task id</b> <code>ts-&lt;monday&gt;-&lt;seat&gt;-s&lt;seed&gt;</code>: the week, the company the AI plays (seat A Dallas, B Houston, C San Antonio) and the seed that draws its jobs, delays and breakdowns. Every model gets exactly the same week, luck and rivals.</li>
+      <li><b>Rivals</b>: the two other companies, run by the optimizer. When two companies claim the same job, the one with a truck closer to the pickup gets it.</li>
+      <li><b>Score</b>: max(0, 0.2 + 0.8 × (profit − simple) / (optimizer − simple)), where simple and optimizer are those dispatchers' profits in the same company and week.</li>
+      <li><b>Hours of service</b> (49 CFR 395.3): 11 hours of driving and a 14-hour window per shift, a 30-minute break after 8 hours of driving, 70 hours in 8 days, a 34-hour restart.</li>
+      <li><b>Real data</b>: roads from OpenStreetMap (via OSRM); diesel prices from the U.S. EIA; which lanes have freight from FAF5 (FHWA/BTS); storms from NOAA's Storm Events database. Job prices and several costs are modelled; the repo lists every assumption.</li>
+    </ul></details>
+    <div class="links">
+      <a href="#/runs">Explorer</a><span>every run in one table</span>
+      <a href="https://github.com/polakamtejas/agentenv-trucksim-plugin" target="_blank" rel="noopener">agentenv-trucksim ↗</a><span>the game, the AI's harness and this viewer</span>
+      <a href="https://www.agentenvframework.com" target="_blank" rel="noopener">AgentEnv Framework ↗</a><span>what it runs on</span>
+    </div>
+    <p class="note" style="margin-top:18px">Roads © OpenStreetMap contributors (ODbL). The look follows PortSimEnv on AgentEnv's replay viewer.</p>
+  </div>`;
+}
+
+// ---------------- explorer ----------------
+function explorer(main) {
+  crumbs([{ text: "Runs", href: "#/runs" }]);
+  const runs = [...(SITE.runs || [])].sort((a, b) => (a.task + a.model).localeCompare(b.task + b.model));
+  main.innerHTML = `<div class="ov-page"><h1>Explorer</h1><div class="note">${runs.length} runs. Click one to replay it.</div>
+    <table class="t"><thead><tr><th>Week</th><th>Kind</th><th>Seat</th><th>Model</th><th class="r">Reward</th><th class="r">Profit</th><th class="r">Loads</th><th class="r">Missed turns</th><th class="r">Tool calls</th><th class="r">Minutes</th></tr></thead>
+    <tbody>${runs.map(r => `<tr class="click" data-id="${esc(r.id)}"><td><code>${esc(r.task)}</code></td><td>${esc(r.kind || "")}</td><td>${esc(r.seat)} ${esc(r.hub || "")}</td><td>${esc(shortModel(r.model))}</td><td class="r"><b>${fix(r.reward)}</b></td><td class="r">${money(r.profit_usd)}</td><td class="r">${r.delivered ?? "—"}</td><td class="r">${r.missed_turns ?? "—"}</td><td class="r">${r.tool_calls ?? "—"}</td><td class="r">${r.seconds ? (r.seconds / 60).toFixed(1) : "—"}</td></tr>`).join("")}</tbody></table></div>`;
+  main.querySelectorAll("tr.click").forEach(tr => tr.addEventListener("click", () => { location.hash = `#/run/${encodeURIComponent(tr.dataset.id)}`; }));
+}
+
+// ---------------- the run page ----------------
+async function runPage(main, id) {
+  const summary = (SITE.runs || []).find(r => r.id === id);
+  const doc = await loadDoc(id);
+  crumbs([{ text: "Runs", href: "#/runs" }, { text: summary ? summary.task : id }, { text: summary ? shortModel(summary.model) : "" }]);
+  const others = (SITE.runs || []).filter(r => summary && r.task === summary.task && r.id !== id);
+  const view = mountRun(main, doc, summary, { others });
+  teardown = () => view.destroy();
+}
+async function livePage(main, port) {
+  const src = `/game/${port}/replay.json`;
+  crumbs([{ text: "Live" }, { text: `port ${port}` }]);
+  let doc = await (await fetch(src)).json();
+  if (doc.error) throw new Error(doc.error);
+  let view = mountRun(main, doc, null, { live: true });
+  const timer = setInterval(async () => {
+    try {
+      const nxt = await (await fetch(src)).json();
+      if (nxt.live && nxt.live.tick !== doc.live.tick) { const keep = view.state(); view.destroy(); doc = nxt; view = mountRun(main, doc, null, { live: true, keep }); }
+    } catch (e) { /* the env went away: keep the last view */ }
+  }, 6000);
+  teardown = () => { clearInterval(timer); view.destroy(); };
+}
+
+function mountRun(main, R, summary, opts) {
+  if (R.format !== "trucksim-replay/1") throw new Error(`not a TruckSimEnv replay (${R.format})`);
+  const cities = Object.fromEntries(R.board.cities.map(c => [c.id, c]));
+  const edgeOf = {}; R.board.edges.forEach(e => { edgeOf[e.a + ">" + e.b] = e; edgeOf[e.b + ">" + e.a] = e; });
+  const seatIds = Object.keys(R.seats).sort();
+  const modelSeat = seatIds.find(s => R.seats[s].model) || null;
+  const trucksBySeat = {}; R.trucks.forEach(t => (trucksBySeat[t.seat] ||= []).push(t));
+  const end = R.live ? R.live.tick : R.week.week_ticks;
+  const keep = opts.keep || {};
+  const qt = new URLSearchParams(location.search).get("t");   // ?t=<tick>: open at that moment (a shareable link)
+  const st = { now: keep.now != null ? Math.min(keep.now, end) : (qt != null ? Math.min(+qt, end) : (R.live ? end : 0)), seat: keep.seat || modelSeat || seatIds[0], truck: keep.truck || null,
+               names: keep.names ?? true, wx: keep.wx ?? true, ghost: null, ghostDoc: null, timer: null };
+  st.truck = st.truck || trucksBySeat[st.seat][0].id;
+  const model = (R.agents[modelSeat] || {}).model || (summary && summary.model) || (modelSeat ? R.seats[modelSeat].label || "agent" : "reference policies");
+  const refs = R.result.references;
+  const rewardNow = modelSeat && R.result.rewards ? R.result.rewards[modelSeat] : (summary ? summary.reward : null);
+  const reward = summary && summary.reward != null ? summary.reward : rewardNow;
+  const live = !!opts.live && R.live && !R.live.done;
+  main.innerHTML = `<div class="page">
+    <div class="page-head"><h1>${esc(shortModel(model))}</h1><span class="meta">${esc(summary ? summary.task : "live game")} · week of ${esc(R.week.monday)} · seed ${R.week.seed}${modelSeat ? ` · seat ${modelSeat} (${esc(cities[R.seats[modelSeat].hub].name)})` : ""}${live ? " · <b>live</b>" : ""}</span>${modelSeat && summary && summary.id && !SITE.docs && !live ? `<a class="play3d" href="cinema.html?run=${encodeURIComponent(summary.id)}" title="The week in 3D: the map, the trucks, the storms, and the agent's turns as it played them">▶ 3D playthrough</a>` : ""}</div>
+    <div class="ro-grid">
+      <div class="ro-left">
+        <section><div class="sec-head"><h2>${live ? "So far" : "Final grade"}</h2></div><dl class="kv" id="grade"></dl></section>
+        <section class="watch"><div class="sec-head"><h2 id="w-title"></h2><span class="muted small" id="w-sub"></span></div>
+          <div class="watch-h">What happened</div><ul class="feed" id="feed"></ul>
+          <div class="watch-h" id="calls-h">The operator</div><ul class="msgs" id="calls"></ul></section>
+        <section><div class="sec-head"><h2>Seats</h2></div><table class="t" id="seats"></table></section>
+        <section id="drivers-sec"><div class="sec-head"><h2>Drivers</h2><span class="muted small" id="drv-sub"></span></div><table class="t" id="drivers"></table></section>
+      </div>
+      <div class="ro-right">
+        <div class="stage" id="stage"><svg id="map" preserveAspectRatio="xMaxYMid meet"></svg>
+          <div class="ov ov-tl"><div class="ovbox stepnav"><button class="ovb" id="prev" title="previous turn">‹</button><span id="stepl" class="num"></span><button class="ovb" id="next" title="next turn">›</button></div><div class="ovbox" id="status"></div></div>
+          <div class="ov ov-tr">${opts.others && opts.others.length ? `<select class="ovs" id="ghost" title="Show another model's run of the same week and company: its trucks dashed on the map, its profit dashed in the race"><option value="">Compare with…</option>${opts.others.map(o => `<option value="${esc(o.id)}">Compare with ${esc(shortModel(o.model))}</option>`).join("")}</select>` : ""}<button class="ovb" id="b-names" aria-pressed="true">Names</button><button class="ovb" id="b-wx" aria-pressed="true">Weather</button><button class="ovb" id="b-reset">Reset</button></div>
+          <div class="ovcard" id="card"></div>
+          <div class="attr">Roads © OpenStreetMap contributors (ODbL) · OSRM</div>
+          <div class="scrub"><button class="ovb play" id="play">▶</button><select class="ovs" id="speed"><option value="2">2 h/s</option><option value="6" selected>6 h/s</option><option value="12">12 h/s</option><option value="24">1 d/s</option></select>
+            <input class="range" id="range" type="range" min="0" max="${end}" step="1"><div class="clock"><b id="clock-b"></b><span id="clock-s"></span></div></div>
+        </div>
+        <div class="chart-sec"><div class="sec-head"><h2>Fleet chart</h2><span class="muted small">every truck's week, hour by hour; the orange line is now</span></div><div class="legend" id="fleet-legend"></div><svg id="fleet" width="100%"></svg></div>
+        <div class="two">
+          <div class="chart-sec"><div class="sec-head"><h2>Profit race</h2><span class="muted small">after costs, as booked each turn</span></div><svg id="race" viewBox="0 0 560 230" width="100%"></svg></div>
+          <div class="chart-sec"><div class="sec-head"><h2 id="eld-title">Driver log</h2></div><svg id="eld" viewBox="0 0 560 176" width="100%"></svg></div>
+        </div>
+      </div>
+    </div></div>`;
+
+  // ---- the left column ----
+  const me = modelSeat ? R.seats[modelSeat] : null;
+  const usage = (R.agents[modelSeat] || {}).usage || (summary || {}).usage;
+  const audit = R.result.audit;
+  $("grade").innerHTML = [
+    ["Score", reward != null ? `<b>${fix(reward)}</b>${live ? " so far" : ""}` : "—", "the reward: 0.2 at the simple dispatcher's profit, 1.0 at the optimizer's, above 1.0 for beating it"],
+    ["Profit", me ? money(me.profit_usd) : "—", "the seat's week after the end-of-week charges"],
+    ["Simple dispatcher", refs ? money(refs.naive_usd) : "—", "what a simple dispatcher made with this company in this week, against the same rivals (score 0.2)"],
+    ["Optimizer", refs ? money(refs.anchor_usd) : "—", "what the optimizer (a CP-SAT re-planner) made with this company in this week, against the same rivals (score 1.0)"],
+    ["Loads delivered", me ? me.delivered : "—"],
+    ["Turns", R.result.moves && modelSeat && R.result.moves[modelSeat] ? `${R.result.moves[modelSeat].made} ended by the model · ${R.result.moves[modelSeat].missed} by the env` : "—", "an idle seat's turn is ended for it, and counted"],
+    ["Tool calls", summary && summary.tool_calls != null ? summary.tool_calls : (usage ? usage.tool_calls : "—")],
+    ["Tokens", usage ? `${(usage.input_tokens || 0).toLocaleString()} in · ${(usage.output_tokens || 0).toLocaleString()} out` : "—"],
+    ["Time", summary && summary.seconds ? `${(summary.seconds / 60).toFixed(1)} min` : ((R.agents[modelSeat] || {}).seconds ? `${(R.agents[modelSeat].seconds / 60).toFixed(1)} min` : "—")],
+    ["Audit", audit ? (audit.ok ? '<span class="dot ok"></span>passed' : `<span class="dot bad"></span>${esc(audit.problems.slice(0, 2).join("; "))}`) : (live ? "at the end of the week" : "—"), "every offer posted once, every duty log legal, the books balance"],
+  ].map(([k, v, t]) => `<dt${t ? ` title="${esc(t)}"` : ""}>${k}</dt><dd>${v}</dd>`).join("");
+
+  // ---- the board ----
+  const lats = R.board.cities.map(c => c.lat), lons = R.board.cities.map(c => c.lon);
+  const LAT0 = Math.min(...lats) - 0.5, LAT1 = Math.max(...lats) + 0.6, LON0 = Math.min(...lons) - 0.8, LON1 = Math.max(...lons) + 0.6;
+  const KX = Math.cos((LAT0 + LAT1) / 2 * Math.PI / 180), S = 80, OX = 30, OY = 50;   // px per degree; the viewBox fits the board
+  const proj = (la, lo) => [OX + (lo - LON0) * KX * S, OY + (LAT1 - la) * S];
+  const map = $("map");
+  map.setAttribute("viewBox", `0 0 ${Math.round(2 * OX + (LON1 - LON0) * KX * S)} ${Math.round(OY + 70 + (LAT1 - LAT0) * S)}`);
+  const _ = 0, gWx = el("g", {}, map), gRoads = el("g", {}, map), gCities = el("g", {}, map), gHubs = el("g", {}, map), gGhost = el("g", {}, map), gTrucks = el("g", {}, map);
+  const geo = {};
+  R.board.edges.forEach(e => {
+    const pts = e.geometry.map(([la, lo]) => proj(la, lo)), d = pts.map(p => p.map(v => v.toFixed(1)).join(",")).join(" ");
+    el("polyline", { points: d, fill: "none", stroke: "#2a3c47", "stroke-width": 5, "stroke-linecap": "round", "stroke-linejoin": "round" }, gRoads);
+    el("polyline", { points: d, fill: "none", stroke: "#3b5260", "stroke-width": 1.6, "stroke-linecap": "round", "stroke-linejoin": "round" }, gRoads);
+    const hit = el("polyline", { points: d, fill: "none", stroke: "transparent", "stroke-width": 14 }, gRoads);
+    hit.addEventListener("mousemove", ev => showTip(`<b>${esc(e.route.replace(" ", "-"))}</b><br>${esc(cities[e.a].name)} – ${esc(cities[e.b].name)} · ${e.miles} mi`, ev));
+    hit.addEventListener("mouseleave", hideTip);
+    const mk = ps => { const cum = [0]; for (let i = 1; i < ps.length; i++) cum.push(cum[i - 1] + Math.hypot(ps[i][0] - ps[i - 1][0], ps[i][1] - ps[i - 1][1])); return { pts: ps, cum }; };
+    geo[e.a + ">" + e.b] = mk(pts); geo[e.b + ">" + e.a] = mk([...pts].reverse());
+  });
+  const stretchPath = (a, b, m0, m1) => {   // the road a→b from mile m0 to mile m1, as an SVG path
+    const g = geo[a + ">" + b], e = edgeOf[a + ">" + b], len = g.cum[g.cum.length - 1], p0 = m0 / e.miles * len, p1 = m1 / e.miles * len;
+    const pts = [along(a, b, m0)].concat(g.pts.filter((_, i) => g.cum[i] > p0 && g.cum[i] < p1), [along(a, b, m1)]);
+    return pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
+  };
+  const along = (a, b, into) => { const g = geo[a + ">" + b], e = edgeOf[a + ">" + b], target = Math.max(0, Math.min(1, into / e.miles)) * g.cum[g.cum.length - 1];
+    let i = 1; while (i < g.cum.length - 1 && g.cum[i] < target) i++; const f = (target - g.cum[i - 1]) / ((g.cum[i] - g.cum[i - 1]) || 1);
+    return [g.pts[i - 1][0] + (g.pts[i][0] - g.pts[i - 1][0]) * f, g.pts[i - 1][1] + (g.pts[i][1] - g.pts[i - 1][1]) * f]; };
+  const P = Object.fromEntries(R.board.cities.map(c => [c.id, proj(c.lat, c.lon)]));
+  R.board.cities.forEach(c => {
+    const [x, y] = P[c.id];
+    el("circle", { cx: x, cy: y, r: c.freight ? 3.6 : 2.4, fill: c.freight ? "#c9d6e0" : "#7f939e" }, gCities);
+    const right = c.lon < LON1 - 1.2;
+    el("text", { x: x + (right ? 8 : -8), y: y + 4, "font-size": 12, fill: "#c9d6e0", "text-anchor": right ? "start" : "end", stroke: "#0f1b22", "stroke-width": 3, "paint-order": "stroke" }, gCities).textContent = c.name;
+  });
+  seatIds.forEach(s => {
+    const [x, y] = P[R.seats[s].hub], g = el("g", { transform: `translate(${x},${y - 19})` }, gHubs);
+    el("rect", { x: -8, y: -8, width: 16, height: 16, rx: 2, transform: "rotate(45)", fill: seatColor(s), stroke: "#0f1b22", "stroke-width": 2 }, g);
+    el("text", { y: 4, "font-size": 10.5, "font-weight": 700, "text-anchor": "middle", fill: "#fff" }, g).textContent = s;
+  });
+  const wx = [], open = {};
+  R.events.forEach(e => {
+    if (e.kind === "weather_start") open[e.event_id] = { city: e.city, where: e.where || (e.city ? cities[e.city].name : ""), spans: e.spans || null, type: e.type, from: e.t, f: e.speed_factor };
+    if (e.kind === "weather_end" && open[e.event_id]) { wx.push({ ...open[e.event_id], to: e.t }); delete open[e.event_id]; }
+  });
+  Object.values(open).forEach(w => wx.push({ ...w, to: end }));
+  const closures = [], shut = {};   // road closures (v1.1): from closure_start to closure_end
+  R.events.forEach(e => {
+    if (e.kind === "closure_start") shut[e.closure_id] = { ...e, from: e.t };
+    if (e.kind === "closure_end" && shut[e.closure_id]) { closures.push({ ...shut[e.closure_id], to: e.t }); delete shut[e.closure_id]; }
+  });
+  Object.values(shut).forEach(c => closures.push({ ...c, to: end }));
+  const closureWay = c => c.direction === "a>b" ? `toward ${cities[c.b].name} only` : c.direction === "b>a" ? `toward ${cities[c.a].name} only` : "both ways";
+  const snapAt = (doc, tid, tick) => {
+    const s = doc.snapshots;
+    if (!s.length || tick < s[0][0]) { const t = doc.trucks.find(x => x.id === tid); return { s0: [t.hub, null, null, 0, "stopped", "OFF"], s1: null, f: 0 }; }
+    let i = Math.min(s.length - 1, Math.floor((tick - s[0][0]) / 4)); while (i > 0 && s[i][0] > tick) i--;
+    const n = s[i + 1]; return { s0: s[i][1][tid], s1: n ? n[1][tid] : null, f: n ? (tick - s[i][0]) / (n[0] - s[i][0]) : 0 };
+  };
+  const posOf = s => s[0] ? P[s[0]] : along(s[1], s[2], s[3]);
+  const truckXY = (doc, tid, tick) => {
+    const { s0, s1, f } = snapAt(doc, tid, tick);
+    if (s1 && s0[1] && s1[1] && s0[1] === s1[1] && s0[2] === s1[2]) return { xy: along(s0[1], s0[2], s0[3] + (s1[3] - s0[3]) * f), s: s0 };
+    if (s1 && s0[0] && s1[1] && s1[1] === s0[0]) return { xy: along(s1[1], s1[2], s1[3] * f), s: s0 };
+    if (s1 && s0[1] && s1[0] && s1[0] === s0[2]) return { xy: along(s0[1], s0[2], s0[3] + (edgeOf[s0[1] + ">" + s0[2]].miles - s0[3]) * f), s: s0 };
+    return { xy: posOf(s0), s: s0 };
+  };
+  const whereText = s => s[0] ? cities[s[0]].name : `${edgeOf[s[1] + ">" + s[2]].route.replace(" ", "-")}, ${Math.round(s[3])} mi from ${cities[s[1]].name} toward ${cities[s[2]].name}`;
+  const glyph = (g, state, color, size = 1) => {
+    if (state === "loaded") el("circle", { r: 6.5 * size, fill: color, stroke: "#0f1b22", "stroke-width": 2 }, g);
+    else if (state === "empty") el("circle", { r: 6 * size, fill: "#0f1b22", stroke: color, "stroke-width": 2.6 }, g);
+    else el("rect", { x: -5.5 * size, y: -5.5 * size, width: 11 * size, height: 11 * size, rx: 2, fill: color, stroke: "#0f1b22", "stroke-width": 2, opacity: state === "resting" ? 0.72 : 1 }, g);
+  };
+  // the compared run's trucks of this seat now, and whether each is somewhere else than the same truck in this run
+  const ghostTrucks = () => st.ghostDoc.trucks.filter(t => t.seat === modelSeat).map(t => {
+    const { xy, s } = truckXY(st.ghostDoc, t.id, st.now), here = truckXY(R, t.id, st.now).xy;
+    return { t, xy, s, here, apart: Math.hypot(xy[0] - here[0], xy[1] - here[1]) > 14 };
+  });
+  function drawMap() {
+    gWx.replaceChildren(); gTrucks.replaceChildren(); gGhost.replaceChildren();
+    if (st.wx) {   // storms on the stretches of road they hit, the worst per stretch: NOAA files one storm for many counties
+      const byStretch = {};
+      wx.filter(w => w.spans && w.from <= st.now && st.now < w.to).forEach(w => w.spans.forEach(([a, b, m0, m1]) => (byStretch[`${a}>${b}>${m0}>${m1}`] ||= { a, b, m0, m1, ws: [] }).ws.push(w)));
+      Object.values(byStretch).forEach(({ a, b, m0, m1, ws }) => {
+        const worst = ws.reduce((x, y) => (y.f < x.f ? y : x)), d = stretchPath(a, b, m0, m1);
+        el("path", { d, fill: "none", stroke: "#9fc4ea", "stroke-opacity": 0.18 + 0.5 * (1 - worst.f), "stroke-width": 9 + 9 * (1 - worst.f), "stroke-linecap": "round", "stroke-linejoin": "round" }, gWx);
+        const hit = el("path", { d, fill: "none", stroke: "transparent", "stroke-width": 16 }, gWx);
+        const kinds = [...new Set(ws.map(w => w.type))], e = edgeOf[a + ">" + b];
+        hit.addEventListener("mousemove", ev => showTip(`<b>${esc(kinds.join(", "))}</b> · ${esc(worst.where)}<br>${esc(e.route.replace(" ", "-"))} ${esc(cities[a].name)}–${esc(cities[b].name)}, miles ${Math.round(m0)}–${Math.round(m1)} from ${esc(cities[a].name)}<br>trucks at ${Math.round(worst.f * 100)}% speed until ${clockOf(Math.max(...ws.map(w => w.to)))}`, ev));
+        hit.addEventListener("mouseleave", hideTip);
+      });
+      closures.filter(c => c.from <= st.now && st.now < c.to).forEach(c => {
+        const d = stretchPath(c.a, c.b, c.m0, c.m1), mid = along(c.a, c.b, (c.m0 + c.m1) / 2);
+        el("path", { d, fill: "none", stroke: "#ff5a4c", "stroke-width": 5, "stroke-dasharray": "4 3", "stroke-linecap": "butt" }, gWx);
+        const mark = el("text", { x: mid[0], y: mid[1] - 7, "font-size": 13, "text-anchor": "middle" }, gWx); mark.textContent = "⛔";
+        const hit = el("path", { d, fill: "none", stroke: "transparent", "stroke-width": 16 }, gWx);
+        const tip = ev => showTip(`<b>${esc(c.road.replace(" ", "-"))} closed</b> ${esc(closureWay(c))}, miles ${Math.round(c.m0)}–${Math.round(c.m1)} from ${esc(cities[c.a].name)}<br>${esc(c.cause)} · ${esc(c.where)}<br>${esc(c.source === "NOAA narrative" ? "NOAA: " + c.what : "modeled from the storm")}<br>since ${clockOf(c.from)} · announced to reopen about ${clockOf(c.reopens_about)}${st.now >= c.reopens_about ? " (still shut)" : ""}`, ev);
+        [hit, mark].forEach(x => { x.addEventListener("mousemove", tip); x.addEventListener("mouseleave", hideTip); });
+      });
+      const byCity = {};   // a v1 replay: one halo per city, its worst weather now
+      wx.filter(w => !w.spans && w.from <= st.now && st.now < w.to).forEach(w => { (byCity[w.city] ||= []).push(w); });
+      Object.entries(byCity).forEach(([city, ws]) => {
+        const worst = ws.reduce((a, b) => (b.f < a.f ? b : a)), [x, y] = P[city];
+        const c = el("circle", { cx: x, cy: y, r: 18 + 20 * (1 - worst.f), fill: "#9fc4ea", "fill-opacity": 0.08 + 0.2 * (1 - worst.f), stroke: "#9fc4ea", "stroke-opacity": 0.3 }, gWx);
+        const kinds = [...new Set(ws.map(w => w.type))];
+        c.addEventListener("mousemove", ev => showTip(`<b>${esc(kinds.join(", "))}</b><br>${esc(cities[city].name)} until ${clockOf(Math.max(...ws.map(w => w.to)))}<br>roads at ${Math.round(worst.f * 100)}% speed`, ev));
+        c.addEventListener("mouseleave", hideTip);
+      });
+    }
+    if (st.ghostDoc && modelSeat) ghostTrucks().forEach(({ t, xy, s, here, apart }) => {
+      const color = seatColor(modelSeat), at = apart ? xy : [xy[0] + 9, xy[1] + 9];
+      if (apart) el("line", { x1: here[0], y1: here[1], x2: at[0], y2: at[1], stroke: color, "stroke-width": 1.4, "stroke-dasharray": "1 3", "stroke-linecap": "round" }, gGhost);
+      const g = el("g", { transform: `translate(${at[0].toFixed(1)},${at[1].toFixed(1)})` }, gGhost);
+      el("circle", { r: 8.5, fill: color, "fill-opacity": 0.22, stroke: color, "stroke-width": 2, "stroke-dasharray": "3 2" }, g);
+      g.addEventListener("mousemove", ev => showTip(`<b>${t.id} in ${esc(shortModel(st.ghost))}'s run</b> (same week, same company): ${STATE[s[4]]}<br>${esc(whereText(s))}`, ev)); g.addEventListener("mouseleave", hideTip);
+    });
+    R.trucks.forEach(t => {
+      const { xy, s } = truckXY(R, t.id, st.now), state = s[4];
+      const g = el("g", { transform: `translate(${xy[0].toFixed(1)},${xy[1].toFixed(1)})`, style: "cursor:pointer" }, gTrucks);
+      if (t.id === st.truck) el("circle", { r: 12, fill: "none", stroke: "#fff", "stroke-width": 1.5 }, g);
+      glyph(g, state, seatColor(t.seat), unitOf(t).size);
+      if (st.names || state === "broken" || state === "held") el("text", { x: 10, y: -8, "font-size": 11, "font-weight": 600, fill: state === "broken" || state === "held" ? "#ff9a8f" : "#f0f5f6", stroke: "#0f1b22", "stroke-width": 3, "paint-order": "stroke" }, g).textContent = (st.names ? t.id : "") + (ICON[state] ? " " + ICON[state] : "");
+      el("circle", { r: 14, fill: "transparent" }, g);
+      g.addEventListener("mousemove", ev => showTip(`<b>${t.id}</b> · ${esc(unitOf(t).label)} · seat ${t.seat}<br>${esc(s[6] ? (s[6].map(driverName).join(" & ") || "no driver: parked") : t.driver)}<br>${STATE[state]}${aboardText(t.id)}<br><span class="muted">${esc(whereText(s))}</span>`, ev));
+      g.addEventListener("mouseleave", hideTip);
+      g.addEventListener("click", () => { st.truck = t.id; st.seat = t.seat; render(); });
+    });
+  }
+
+  // ---- profit series ----
+  const seriesOf = (doc, s, last) => { let c = 0; const pts = [[0, 0]]; doc.ledger.filter(l => l.seat === s).sort((a, b) => a.t - b.t).forEach(l => { for (const [k, v] of Object.entries(l.items)) c += REVENUE.includes(k) ? v : -v; pts.push([l.t, c]); }); pts.push([last, doc.seats[s].profit_usd]); return pts; };
+  const valueAt = (pts, tick) => { let v = 0; for (const [t, p] of pts) { if (t <= tick) v = p; else break; } return v; };
+  const series = Object.fromEntries(seatIds.map(s => [s, seriesOf(R, s, end)]));
+  const profitAt = (s, tick) => valueAt(series[s], tick);
+
+  // ---- fleet chart (each truck's week) ----
+  const fleet = $("fleet"), FW = 900, rowH = 15, gap = 6, FM = { l: 134, r: 12, t: 20 };
+  const fleetRows = seatIds.flatMap(s => trucksBySeat[s]);
+  const FH = FM.t + fleetRows.length * rowH + (seatIds.length - 1) * gap + 8;
+  fleet.setAttribute("viewBox", `0 0 ${FW} ${FH}`);
+  const fx = t => FM.l + t / R.week.week_ticks * (FW - FM.l - FM.r);
+  const loadsByTruck = {};
+  R.events.forEach(e => { if (e.kind === "picked") (loadsByTruck[e.truck] ||= []).push({ from: e.t, load: e.load }); if (e.kind === "delivered") { const L = (loadsByTruck[e.truck] || []).find(x => x.load === e.load); if (L) L.to = e.t; } });
+  const aboardText = tid => { const on = (loadsByTruck[tid] || []).filter(L => L.from <= st.now && st.now < (L.to ?? end)).map(L => L.load); return on.length ? `<br>aboard: ${on.map(esc).join(", ")}` : ""; };
+  function drawFleetStatic() {
+    fleet.replaceChildren();
+    const defs = el("defs", {}, fleet), hatch = el("pattern", { id: "hatch-held", width: 5, height: 5, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
+    el("rect", { width: 5, height: 5, fill: "var(--st-stop)" }, hatch); el("rect", { width: 2.2, height: 5, fill: "var(--st-broken)" }, hatch);
+    for (let d = 0; d < 7; d++) {
+      el("rect", { x: fx(d * 96), y: FM.t - 4, width: fx(96) - fx(0), height: FH - FM.t, fill: d % 2 ? "var(--band)" : "transparent" }, fleet);
+      el("text", { x: fx(d * 96 + 48), y: 12, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, fleet).textContent = DAYS[d];
+    }
+    let y = FM.t;
+    seatIds.forEach((s, si) => {
+      trucksBySeat[s].forEach(t => {
+        el("rect", { x: 6, y: y + 3, width: 4, height: rowH - 6, fill: seatColor(s) }, fleet);
+        el("text", { x: 14, y: y + rowH - 4, "font-size": 11, fill: t.seat === modelSeat ? "var(--fg)" : "var(--muted)", "font-weight": t.seat === modelSeat ? 600 : 400 }, fleet).textContent = `${t.id}${t.equipment === "reefer" ? " ❄" : ""} ${t.driver.split(" ")[0]}${unitOf(t).tag}`;
+        let i = 0; const snaps = R.snapshots;
+        while (i < snaps.length) {
+          const state = snaps[i][1][t.id][4]; let j = i; while (j + 1 < snaps.length && snaps[j + 1][1][t.id][4] === state) j++;
+          const a = i ? snaps[i - 1][0] : 0, b = snaps[j][0];
+          const fill = state === "loaded" ? seatColor(s) : state === "empty" ? seatColor(s) : STATE_FILL[state];
+          const r = el("rect", { x: fx(a), y: y + 2, width: Math.max(0.8, fx(b) - fx(a)), height: rowH - 4, rx: 1.5, fill, "fill-opacity": state === "empty" ? 0.35 : 1 }, fleet);
+          r.addEventListener("mousemove", ev => showTip(`<b>${t.id}</b> · ${STATE[state]}<br>${clockOf(a)}–${clockOf(b)} (${((b - a) / 4).toFixed(0)} h)`, ev)); r.addEventListener("mouseleave", hideTip);
+          r.addEventListener("click", () => { st.truck = t.id; st.seat = t.seat; st.now = a; render(); });
+          i = j + 1;
+        }
+        (loadsByTruck[t.id] || []).forEach(L => { const w = fx(L.to ?? end) - fx(L.from); if (w > 44) el("text", { x: fx(L.from) + 4, y: y + rowH - 4.5, "font-size": 9.5, fill: "#fff", "pointer-events": "none" }, fleet).textContent = L.load; });
+        y += rowH;
+      });
+      y += gap;
+    });
+    st.fleetNow = el("line", { y1: FM.t - 4, y2: FH - 4, stroke: "var(--now)", "stroke-width": 1.5 }, fleet);
+  }
+  $("fleet-legend").innerHTML = `<span><i style="background:var(--seat-A)"></i>loaded (seat color)</span><span><i style="background:var(--seat-A);opacity:.35"></i>empty</span><span><i style="background:var(--st-rest)"></i>resting</span><span><i style="background:var(--st-stop);box-shadow:inset 0 0 0 1px var(--line)"></i>stopped</span><span><i style="background:var(--st-det)"></i>detention</span><span><i style="background:var(--st-broken)"></i>broken down</span><span><i style="background:repeating-linear-gradient(45deg,var(--st-broken) 0 2px,var(--st-stop) 2px 4px)"></i>held by a closed road</span><span>load ids on the long loaded runs</span>`;
+
+  // ---- profit race ----
+  const race = $("race"), RW = 560, RH = 230, M = { l: 58, r: 96, t: 10, b: 24 };
+  function drawRaceStatic() {
+    race.replaceChildren();
+    const allV = seatIds.flatMap(s => series[s].map(p => p[1])).concat(refs ? [refs.naive_usd, refs.anchor_usd] : []).concat(st.ghostSeries ? st.ghostSeries.map(p => p[1]) : []), step = 2500;
+    const y0 = Math.floor(Math.min(...allV, 0) / step) * step, y1 = Math.ceil(Math.max(...allV, 0) / step) * step;
+    const rx = t => M.l + t / R.week.week_ticks * (RW - M.l - M.r), ry = v => M.t + (y1 - v) / (y1 - y0 || 1) * (RH - M.t - M.b);
+    st.rx = rx;
+    for (let v = y0; v <= y1; v += step) { el("line", { x1: M.l, x2: RW - M.r, y1: ry(v), y2: ry(v), stroke: v === 0 ? "var(--faint)" : "var(--gridc)" }, race); el("text", { x: M.l - 6, y: ry(v) + 4, "font-size": 10.5, fill: "var(--muted)", "text-anchor": "end" }, race).textContent = money(v); }
+    DAYS.slice(0, 7).forEach((d, i) => el("text", { x: rx(i * 96 + 48), y: RH - 7, "font-size": 10.5, fill: "var(--muted)", "text-anchor": "middle" }, race).textContent = d);
+    const refRows = refs ? [["optimizer", refs.anchor_usd, "6 4"], ["simple", refs.naive_usd, "2 3"]] : [];
+    refRows.forEach(([n, v, d]) => el("line", { x1: M.l, x2: RW - M.r, y1: ry(v), y2: ry(v), stroke: "var(--muted)", "stroke-dasharray": d }, race));
+    seatIds.forEach(s => el("path", { d: series[s].map(([t, v], i) => `${i ? "L" : "M"}${rx(t).toFixed(1)},${ry(v).toFixed(1)}`).join(""), fill: "none", stroke: seatColor(s), "stroke-width": s === modelSeat ? 2.4 : 1.6, "stroke-linejoin": "round", opacity: s === modelSeat || !modelSeat ? 1 : 0.8 }, race));
+    if (st.ghostSeries) {
+      el("path", { d: st.ghostSeries.map(([t, v], i) => `${i ? "L" : "M"}${rx(t).toFixed(1)},${ry(v).toFixed(1)}`).join(""), fill: "none", stroke: seatColor(modelSeat), "stroke-width": 2, "stroke-dasharray": "5 3", "stroke-linejoin": "round" }, race);
+    }
+    const ends = seatIds.map(s => ({ text: `${s} ${money(R.seats[s].profit_usd)}`, y: ry(R.seats[s].profit_usd), bold: s === modelSeat }))
+      .concat(refRows.map(([n, v]) => ({ text: `${n} ${money(v)}`, y: ry(v), muted: true })));   // every end label in one column, spaced so none overlap
+    if (st.ghostSeries) ends.push({ text: `${nick(st.ghost)} ${money(st.ghostSeries[st.ghostSeries.length - 1][1])}`, y: ry(st.ghostSeries[st.ghostSeries.length - 1][1]) });
+    ends.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 12);
+    ends.forEach(({ text, y, bold, muted }) => el("text", { x: RW - M.r + 5, y: y + 4, "font-size": muted ? 10 : 10.5, fill: muted ? "var(--muted)" : "var(--fg)", "font-weight": bold ? 600 : 400 }, race).textContent = text);
+    st.raceNow = el("line", { y1: M.t, y2: RH - M.b, stroke: "var(--now)", "stroke-width": 1.2 }, race);
+    const hit = el("rect", { x: M.l, y: M.t, width: RW - M.l - M.r, height: RH - M.t - M.b, fill: "transparent" }, race);
+    hit.addEventListener("mousemove", ev => { const pt = race.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const t = Math.max(0, Math.min(R.week.week_ticks, Math.round((pt.matrixTransform(race.getScreenCTM().inverse()).x - M.l) / (RW - M.l - M.r) * R.week.week_ticks)));
+      showTip(`<b>${clockOf(t)}</b><br>` + seatIds.map(s => [s, profitAt(s, t)]).sort((a, b) => b[1] - a[1]).map(([s, v]) => `<span class="dot" style="background:${seatColor(s)}"></span>Seat ${s} ${money(v)}`).join("<br>")
+        + (st.ghostSeries ? `<br><span class="ring" style="border-color:${seatColor(modelSeat)}"></span>Seat ${modelSeat} in ${esc(shortModel(st.ghost))}'s run ${money(valueAt(st.ghostSeries, t))}` : ""), ev); });
+    hit.addEventListener("mouseleave", hideTip);
+  }
+
+  // ---- driver log ----
+  const eld = $("eld"), EW = 560, EM = { l: 122, r: 46, t: 20 }, RHt = 34, ROWS = ["OFF", "SB", "D", "ON"], LBL = { OFF: "Off duty", SB: "Sleeper berth", D: "Driving", ON: "On duty (not driving)" };
+  const driverName = id => ((R.drivers || []).find(d => d.id === id) || {}).name || id;
+  function drawEld() {   // one log per driver on the unit now (both of a team); a v1 replay keeps logs by truck
+    eld.replaceChildren();
+    const t = R.trucks.find(x => x.id === st.truck), day = Math.min(6, Math.floor(Math.max(0, st.now - 1) / 96)), d0 = day * 96;
+    const first = R.snapshots.length && R.snapshots[0][1][st.truck];
+    const crew = snapAt(R, st.truck, st.now).s0[6] ?? (first ? first[6] : undefined);
+    const logs = crew ? crew.map(id => [driverName(id), R.duty[id] || []]) : [[t.driver, R.duty[st.truck] || []]];
+    $("eld-title").textContent = `Driver log · ${logs.length ? logs.map(([n]) => n).join(" & ") : "no driver"}, ${t.id}, ${DAYS[day]}`;
+    const GH = 4 * RHt + 34;
+    eld.setAttribute("viewBox", `0 0 ${EW} ${Math.max(1, logs.length) * GH + 8}`);
+    if (!logs.length) { el("text", { x: EW / 2, y: 60, "font-size": 12, fill: "var(--muted)", "text-anchor": "middle" }, eld).textContent = "Parked at the hub: nobody on this unit now"; return; }
+    const ex = tick => EM.l + (tick - d0) / 96 * (EW - EM.l - EM.r);
+    logs.forEach(([name, log], k) => {
+      const top = EM.t + k * GH, ey = c => top + ROWS.indexOf(c) * RHt + RHt / 2;
+      const segs = log.map(([a, b, s]) => [Math.max(a, d0), Math.min(b, d0 + 96), s]).filter(([a, b]) => b > a);
+      if (logs.length > 1) el("text", { x: 4, y: top - 6, "font-size": 10.5, "font-weight": 600, fill: "var(--fg)" }, eld).textContent = name;
+      ROWS.forEach((c, i) => { el("rect", { x: EM.l, y: top + i * RHt, width: EW - EM.l - EM.r, height: RHt, fill: i % 2 ? "var(--band)" : "transparent" }, eld);
+        el("text", { x: EM.l - 8, y: top + i * RHt + RHt / 2 + 4, "font-size": 10.5, fill: "var(--muted)", "text-anchor": "end" }, eld).textContent = LBL[c];
+        el("text", { x: EW - EM.r + 6, y: top + i * RHt + RHt / 2 + 4, "font-size": 10.5, fill: "var(--fg)" }, eld).textContent = (segs.filter(s => s[2] === c).reduce((acc, [x, y]) => acc + y - x, 0) / 4).toFixed(2).replace(/\.00$/, "") + " h"; });
+      for (let h = 0; h <= 24; h++) { el("line", { x1: ex(d0 + h * 4), x2: ex(d0 + h * 4), y1: top, y2: top + 4 * RHt, stroke: "var(--gridc)" }, eld);
+        if (h % 2 === 0 && k === 0) el("text", { x: ex(d0 + h * 4), y: top - 6, "font-size": 10, fill: "var(--muted)", "text-anchor": "middle" }, eld).textContent = h === 0 || h === 24 ? "Mid" : h === 12 ? "Noon" : String(h > 12 ? h - 12 : h); }
+      el("rect", { x: EM.l, y: top, width: EW - EM.l - EM.r, height: 4 * RHt, fill: "none", stroke: "var(--line)" }, eld);
+      segs.forEach(([a, b, s], i) => { const y = ey(s);
+        if (i) el("line", { x1: ex(a), x2: ex(a), y1: ey(segs[i - 1][2]), y2: y, stroke: a <= st.now ? "var(--fg)" : "var(--faint)", "stroke-width": 2 }, eld);
+        if (a < st.now && st.now < b) { el("line", { x1: ex(a), x2: ex(st.now), y1: y, y2: y, stroke: "var(--fg)", "stroke-width": 2 }, eld); el("line", { x1: ex(st.now), x2: ex(b), y1: y, y2: y, stroke: "var(--faint)", "stroke-width": 2, "stroke-dasharray": "4 3" }, eld); }
+        else el("line", { x1: ex(a), x2: ex(b), y1: y, y2: y, stroke: b <= st.now ? "var(--fg)" : "var(--faint)", "stroke-width": 2, "stroke-dasharray": b <= st.now ? "" : "4 3" }, eld); });
+      if (st.now >= d0 && st.now <= d0 + 96) el("line", { x1: ex(st.now), x2: ex(st.now), y1: top - 2, y2: top + 4 * RHt + 2, stroke: "var(--now)", "stroke-width": 1.2 }, eld);
+    });
+  }
+
+  // ---- the watch panel: this turn ----
+  const describe = e => {
+    switch (e.kind) {
+      case "claim_won": return `Won ${e.load}${e.contested ? " (contested)" : ""}`;
+      case "claim_lost": return `Lost ${e.load}: ${e.reason}`;
+      case "dispatch": return `${e.truck} dispatched: ${e.loads.join(", ") || "plan cleared"}`;
+      case "reposition": return `${e.truck} repositioning to ${cities[e.city].name}`;
+      case "picked": return `${e.truck} loaded ${e.load} (${(e.dwell / 4).toFixed(1)} h at the dock)`;
+      case "delivered": return `${e.truck} delivered ${e.load}${e.late_h ? `, ${e.late_h} h late` : ", on time"}: +${money(e.revenue_usd)}`;
+      case "missed_pickup": return `Missed the pickup of ${e.load} (−${money(e.penalty)})`;
+      case "load_cancelled": return `${e.load} cancelled by the shipper${e.tonu_usd ? ` (TONU +${money(e.tonu_usd)})` : ""}`;
+      case "released": return `Released ${e.load} (−${money(e.penalty)})`;
+      case "breakdown": return `⚠ ${e.truck}: ${e.component} failed, ${e.where}`;
+      case "fault_warning": return `${e.truck}: fault code (${e.component})`;
+      case "repair_ordered": return `${e.truck}: ${e.option} repair ordered (${money(e.usd)})`;
+      case "repaired": return `${e.truck} repaired`;
+      case "maintenance_booked": return `${e.truck} booked for maintenance in ${cities[e.city].name}`;
+      case "rest": return `${e.truck}'s driver rests until ${clockOf(e.until)} (${e.reason})`;
+      case "closure_start": return `${e.road.replace(" ", "-")} closed ${closureWay(e)} (${e.cause}, ${e.where}${e.source === "NOAA narrative" ? ", reported by NOAA" : ""}); reopens about ${clockOf(e.reopens_about)}`;
+      case "closure_end": return `${e.road.replace(" ", "-")} reopened`;
+      case "held": return `${e.truck} stopped by the ${e.road.replace(" ", "-")} closure, ${e.where}`;
+      case "detour": return `${e.truck} detours: ${e.via.map(c => cities[c].name).join(" → ")}`;
+      case "turned_back": return `${e.truck} turns back from a closed road: ${e.via.map(c => cities[c].name).join(" → ")}`;
+      case "adverse_conditions": return `${e.truck}'s driver gets 2 more hours (adverse driving conditions, 49 CFR 395.1(b)(1))`;
+      case "crew_change": return `${e.truck} crew now ${e.crew.length ? e.crew.map(driverName).join(" & ") : "nobody"}`;
+      case "declined": return `${e.truck}'s owner-operator ${e.owner} turned down ${(e.loads || []).join(", ") || "the trip"}: ${e.why}`;
+      case "temp_hired": return `Temp driver ${e.driver} called: at the hub ${clockOf(e.arrives)}, until ${clockOf(e.until)}`;
+      case "temp_left": return `Temp driver ${e.driver} went home`;
+      case "weather_start": return `${e.type}: ${e.where || cities[e.city].name}`;
+      case "weather_end": return `${e.type} over: ${e.where || cities[e.city].name}`;
+      case "week_over": return `Week over: ${Object.entries(e.profit).map(([s, p]) => `${s} ${money(p)}`).join(" · ")}`;
+      default: return null;
+    }
+  };
+  function drawWatch() {
+    const turn = Math.min(27, Math.floor(Math.max(0, st.now - 1) / R.week.turn_ticks)), t0 = turn * R.week.turn_ticks, t1 = t0 + R.week.turn_ticks;
+    $("w-title").textContent = `Turn ${turn + 1} of 28`;
+    $("w-sub").textContent = `${clockOf(t0)} to ${clockOf(t1)} · seat ${st.seat}`;
+    const rows = [], storm = {};   // one line per kind of storm starting (or ending) at one time: NOAA files a storm per county
+    R.events.filter(e => e.t <= st.now && e.t >= t0 - R.week.turn_ticks && (e.seat === st.seat || e.kind.startsWith("weather") || e.kind.startsWith("closure") || e.kind === "week_over")).forEach(e => {
+      const d = describe(e); if (!d) return;
+      if (!e.kind.startsWith("weather")) { rows.push({ e, d }); return; }
+      const k = `${e.t}|${e.kind}|${e.type}`, place = e.where || e.city;
+      if (storm[k]) { storm[k].places.add(place); return; }
+      rows.push(storm[k] = { e, d, places: new Set([place]) });
+    });
+    $("feed").innerHTML = rows.slice(-40).reverse().map(({ e, d, places }) => `<li class="${e.t >= t0 ? "new" : ""}"><span class="t">${clockOf(e.t)}</span>${esc(d)}${places && places.size > 1 ? ` and ${places.size - 1} more place${places.size > 2 ? "s" : ""}` : ""}</li>`).join("") || `<li class="empty">Nothing this turn yet.</li>`;
+    const a = R.agents[st.seat], ul = $("calls");
+    $("calls-h").textContent = R.seats[st.seat].model ? `The operator (${shortModel(a ? a.model : model)}) on turn ${turn + 1}` : `Seat ${st.seat}: a rival`;
+    if (!R.seats[st.seat].model) { ul.innerHTML = `<li class="empty">The game's AI (the re-planner) plays this seat, through the same tools.</li>`; return; }
+    if (!a) { ul.innerHTML = `<li class="empty">${live ? "The model's calls arrive when the week is over: the agent hands back its trajectory then." : "No trajectory in this replay."}</li>`; return; }
+    const rec = a.turns.find(x => x.turn === turn);
+    if (!rec) { ul.innerHTML = `<li class="empty">No record for this turn.</li>`; return; }
+    ul.innerHTML = rec.calls.map(c => c.say ? `<li class="say">${esc(c.say).slice(0, 700)}</li>` : `<li><code>${esc(c.tool)}</code> <code class="muted">${esc(JSON.stringify(c.args)).slice(0, 220)}</code><span class="res">${esc(String(c.out)).slice(0, 420)}</span></li>`).join("")
+      + `<li class="notes"><b>Notes for next turn</b> <span class="muted">(turn ended by the ${esc(rec.ended_by)})</span><span class="res">${esc(rec.notes || "")}</span></li>`;
+  }
+  function drawDrivers() {   // v1.1: who is on which unit now, and how long each has driven today
+    const mine = (R.drivers || []).filter(d => d.seat === st.seat);
+    $("drivers-sec").style.display = mine.length ? "" : "none";
+    if (!mine.length) return;
+    const on = {};
+    trucksBySeat[st.seat].forEach(t => (truckXY(R, t.id, st.now).s[6] || []).forEach(id => { on[id] = t.id; }));
+    const day = Math.min(6, Math.floor(Math.max(0, st.now - 1) / 96)), d0 = day * 96;
+    const drove = id => (R.duty[id] || []).reduce((acc, [a, b, s]) => acc + (s === "D" ? Math.max(0, Math.min(b, st.now, d0 + 96) - Math.max(a, d0)) : 0), 0) / 4;
+    const KIND = { company: "company, by the mile", local: "local, hourly", owner_operator: "owner-operator", temp: "temp" };
+    $("drv-sub").textContent = `seat ${st.seat}, ${DAYS[day]}`;
+    $("drivers").innerHTML = `<thead><tr><th>Driver</th><th>Kind</th><th>Now</th><th class="r">Driven today</th></tr></thead><tbody>${mine.map(d => `<tr${on[d.id] ? ` class="click" data-truck="${on[d.id]}"` : ""}${on[d.id] === st.truck ? ' style="background:var(--sel)"' : ""}><td>${esc(d.name)}</td><td class="muted">${esc(KIND[d.kind] || d.kind)}</td><td>${on[d.id] ? esc(on[d.id]) : '<span class="muted">at home</span>'}</td><td class="r">${drove(d.id).toFixed(1)} h</td></tr>`).join("")}</tbody>`;
+    $("drivers").querySelectorAll("tr.click").forEach(tr => tr.addEventListener("click", () => { st.truck = tr.dataset.truck; render(); }));
+  }
+  function drawSeats() {
+    $("seats").innerHTML = `<thead><tr><th>Seat</th><th>Played by</th><th class="r">Profit</th><th class="r">Delivered</th></tr></thead><tbody>${seatIds.map(s => `<tr class="click" data-seat="${s}"${s === st.seat ? ' style="background:var(--sel)"' : ""}><td><span class="dot" style="background:${seatColor(s)}"></span>${s} ${esc(cities[R.seats[s].hub].name)}</td><td>${R.seats[s].model ? esc(shortModel(model)) : "re-planner (rival)"}</td><td class="r">${money(profitAt(s, st.now))}</td><td class="r">${R.events.filter(e => e.kind === "delivered" && e.seat === s && e.t <= st.now).length}</td></tr>`).join("")}</tbody>`;
+    $("seats").querySelectorAll("tr.click").forEach(tr => tr.addEventListener("click", () => { st.seat = tr.dataset.seat; st.truck = trucksBySeat[st.seat][0].id; render(); }));
+  }
+  function drawCard() {
+    const states = {}; trucksBySeat[st.seat].forEach(t => { const s = truckXY(R, t.id, st.now).s[4]; states[s] = (states[s] || 0) + 1; });
+    const cnt = k => states[k] || 0;
+    $("card").innerHTML = `<div class="ttl">Seat ${st.seat} · ${esc(cities[R.seats[st.seat].hub].name)}</div>
+      <div class="big"><b>${money(profitAt(st.seat, st.now))}</b> <span style="color:#a5bac5">so far</span></div>
+      <div class="sm">${cnt("loaded")} loaded · ${cnt("empty")} empty · ${cnt("resting")} resting · ${cnt("stopped") + cnt("detention")} stopped${cnt("held") ? ` · <span style="color:#ff9a8f">${cnt("held")} held by a closed road</span>` : ""}${cnt("broken") ? ` · <span style="color:#ff9a8f">${cnt("broken")} broken down</span>` : ""}</div>
+      ${(() => { const shutNow = closures.filter(c => c.from <= st.now && st.now < c.to); return shutNow.length ? `<div class="sm">⛔ ${shutNow.length} road${shutNow.length > 1 ? "s" : ""} closed: ${[...new Set(shutNow.map(c => c.road.replace(" ", "-")))].slice(0, 3).map(esc).join(", ")}${shutNow.length > 3 ? "…" : ""}</div>` : ""; })()}
+      ${st.ghostDoc ? (() => { const gs = ghostTrucks(), split = gs.filter(x => x.apart).length, them = valueAt(st.ghostSeries, st.now), us = profitAt(modelSeat, st.now);
+        return `<div class="sm cmp"><span class="ring" style="border-color:${seatColor(modelSeat)}"></span>Rings: ${esc(nick(st.ghost))}'s run, at <b class="nw">${money(them)}</b> so far (${esc(nick(model))} <span class="nw">${us >= them ? "+" : "−"}${money(Math.abs(us - them))}</span>). ${split ? `${split} of ${gs.length} trucks elsewhere, dotted to the same truck here.` : "Every truck in the same place right now."}</div>`; })() : ""}
+      <div class="sm">${(() => { const now = wx.filter(w => w.from <= st.now && st.now < w.to);
+        if (now.some(w => w.spans)) { const roads = [...new Set(now.flatMap(w => (w.spans || []).map(([a, b]) => `${edgeOf[a + ">" + b].route.replace(" ", "-")} ${cities[a].name}–${cities[b].name}`)))];
+          return `Storms slowing ${roads.length} road${roads.length > 1 ? "s" : ""}: ${roads.slice(0, 3).map(esc).join(", ")}${roads.length > 3 ? "…" : ""}`; }
+        const on = [...new Set(now.map(w => w.city))]; return on.length ? `Weather slowing roads at ${on.length} cit${on.length > 1 ? "ies" : "y"}: ${on.slice(0, 4).map(c => esc(cities[c].name)).join(", ")}${on.length > 4 ? "…" : ""}` : "No weather under way"; })()}</div>`;
+  }
+  function render() {
+    const turn = Math.min(28, Math.floor(Math.max(0, st.now - 1) / R.week.turn_ticks) + 1);
+    $("stepl").textContent = `Turn ${turn} of 28`;
+    $("status").innerHTML = `<span class="dot" style="background:${seatColor(st.seat)}"></span>seat ${st.seat}${modelSeat === st.seat && reward != null ? ` · score ${fix(reward)}${live ? " so far" : ""}` : ""}`;
+    $("clock-b").textContent = clockOf(Math.round(st.now)) + (live ? " · live" : "");
+    $("clock-s").textContent = `week of ${R.week.monday} · h ${Math.floor(st.now / 4)}`;
+    $("range").value = st.now;
+    if (st.raceNow) { const x = st.rx(st.now); st.raceNow.setAttribute("x1", x); st.raceNow.setAttribute("x2", x); }
+    if (st.fleetNow) { const x = fx(st.now); st.fleetNow.setAttribute("x1", x); st.fleetNow.setAttribute("x2", x); }
+    drawMap(); drawCard(); drawWatch(); drawSeats(); drawDrivers(); drawEld();
+  }
+  drawFleetStatic(); drawRaceStatic();
+  $("range").addEventListener("input", ev => { st.now = +ev.target.value; render(); });
+  $("prev").addEventListener("click", () => { st.now = Math.max(0, (Math.ceil(st.now / 24) - 1) * 24); render(); });
+  $("next").addEventListener("click", () => { st.now = Math.min(end, (Math.floor(st.now / 24) + 1) * 24); render(); });
+  $("b-names").addEventListener("click", ev => { st.names = !st.names; ev.target.setAttribute("aria-pressed", st.names); render(); });
+  $("b-wx").addEventListener("click", ev => { st.wx = !st.wx; ev.target.setAttribute("aria-pressed", st.wx); render(); });
+  $("b-reset").addEventListener("click", () => { st.now = 0; st.seat = modelSeat || seatIds[0]; st.truck = trucksBySeat[st.seat][0].id; render(); });
+  $("b-names").setAttribute("aria-pressed", st.names); $("b-wx").setAttribute("aria-pressed", st.wx);
+  if ($("ghost")) $("ghost").addEventListener("change", async ev => {
+    const id = ev.target.value; st.ghost = id ? (SITE.runs.find(r => r.id === id) || {}).model : null; st.ghostDoc = id ? await loadDoc(id) : null;
+    st.ghostSeries = st.ghostDoc && modelSeat ? seriesOf(st.ghostDoc, modelSeat, st.ghostDoc.week.week_ticks) : null;
+    drawRaceStatic(); render();
+  });
+  $("play").addEventListener("click", ev => {
+    if (st.timer) { clearInterval(st.timer); st.timer = null; ev.target.textContent = "▶"; return; }
+    if (st.now >= end) st.now = 0;
+    ev.target.textContent = "❚❚";
+    st.timer = setInterval(() => { st.now = Math.min(end, st.now + 4 * (+$("speed").value) / 20); render(); if (st.now >= end) { clearInterval(st.timer); st.timer = null; ev.target.textContent = "▶"; } }, 50);
+  });
+  render();
+  return { destroy() { if (st.timer) clearInterval(st.timer); }, state() { return { now: st.now >= end ? null : st.now, seat: st.seat, truck: st.truck, names: st.names, wx: st.wx }; } };
+}
+
+route();
+</script>
+</body>
+</html>

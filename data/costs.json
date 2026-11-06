@@ -1,0 +1,138 @@
+{
+ "fuel_economy_mpg": {
+  "value": 6.68,
+  "source": "FHWA Highway Statistics 2023 VM-1, combination trucks: 195,758 M vehicle-miles / 29,296,989 thousand gallons"
+ },
+ "box_fuel_economy_mpg": {
+  "value": 7.81,
+  "source": "FHWA Highway Statistics 2023 VM-1, single-unit trucks: 134,101 M vehicle-miles / 17,162,839 thousand gallons"
+ },
+ "van_fuel_economy_mpg": {
+  "value": 17.94,
+  "source": "FHWA Highway Statistics 2023 VM-1, light duty vehicles, long wheelbase: 705,521 M vehicle-miles / 39,334,720 thousand gallons"
+ },
+ "light_driver_wage_hourly_usd": {
+  "value": 23.45,
+  "source": "BLS OEWS 2025, SOC 53-3033 Light Truck Drivers, national mean hourly wage"
+ },
+ "box_lease_per_day_usd": {
+  "value": 60.0,
+  "source": "assumption: no public source fetched (a straight truck or a cargo van costs less than a tractor-trailer) (a 26' box truck on a full-service lease)"
+ },
+ "box_insurance_per_day_usd": {
+  "value": 15.0,
+  "source": "assumption: no public source fetched (a straight truck or a cargo van costs less than a tractor-trailer)"
+ },
+ "box_repair_maintenance_per_mile_usd": {
+  "value": 0.12,
+  "source": "assumption: no public source fetched (a straight truck or a cargo van costs less than a tractor-trailer)"
+ },
+ "box_tires_per_mile_usd": {
+  "value": 0.03,
+  "source": "assumption: no public source fetched (a straight truck or a cargo van costs less than a tractor-trailer)"
+ },
+ "van_lease_per_day_usd": {
+  "value": 30.0,
+  "source": "assumption: no public source fetched (a straight truck or a cargo van costs less than a tractor-trailer) (a high-roof cargo van on a lease)"
+ },
+ "van_insurance_per_day_usd": {
+  "value": 10.0,
+  "source": "assumption: no public source fetched (a straight truck or a cargo van costs less than a tractor-trailer)"
+ },
+ "van_repair_maintenance_per_mile_usd": {
+  "value": 0.08,
+  "source": "assumption: no public source fetched (a straight truck or a cargo van costs less than a tractor-trailer)"
+ },
+ "van_tires_per_mile_usd": {
+  "value": 0.02,
+  "source": "assumption: no public source fetched (a straight truck or a cargo van costs less than a tractor-trailer)"
+ },
+ "reefer_unit_gallons_per_hour": {
+  "value": 0.6,
+  "source": "assumption: no public source fetched (a trailer reefer unit running, loaded)"
+ },
+ "lodging_per_night_usd": {
+  "value": 110.0,
+  "source": "assumption: about the GSA standard lodging rate; a driver without a sleeper cab resting away from home"
+ },
+ "driver_wage_hourly_usd": {
+  "value": 28.71,
+  "source": "BLS OEWS 2025, SOC 53-3032, national mean hourly wage"
+ },
+ "driver_wage_annual_usd": {
+  "value": 59710.0,
+  "source": "BLS OEWS 2025, SOC 53-3032, national mean annual wage"
+ },
+ "driver_benefits_load": {
+  "value": 0.3,
+  "source": "assumption: no public source fetched (benefits as a share on top of wages)"
+ },
+ "repair_maintenance_per_mile_usd": {
+  "value": 0.202,
+  "source": "ATRI Operational Costs of Trucking 2024 Update, Table 8 (2023 average per mile)"
+ },
+ "tires_per_mile_usd": {
+  "value": 0.046,
+  "source": "ATRI Operational Costs of Trucking 2024 Update, Table 8 (2023 average per mile)"
+ },
+ "truck_trailer_lease_per_day_usd": {
+  "value": 100.0,
+  "source": "assumption, in line with ATRI Operational Costs of Trucking 2024 Update, Table 8 (2023 average per mile): truck/trailer payments $0.360/mi at about 100,000 miles a year"
+ },
+ "insurance_per_day_usd": {
+  "value": 30.0,
+  "source": "assumption, in line with ATRI Operational Costs of Trucking 2024 Update, Table 8 (2023 average per mile): insurance $0.099/mi at about 100,000 miles a year"
+ },
+ "company_driver_pay_per_mile_usd": {
+  "value": 0.967,
+  "source": "ATRI Operational Costs of Trucking 2024 Update, Table 8 (2023 average per mile): driver wages $0.779 + benefits $0.188 per mile (a tractor's company driver is paid by the mile, every mile)"
+ },
+ "team_pay_factor": {
+  "value": 1.25,
+  "source": "assumption: no public source fetched (a team truck's pay per mile, split between its two drivers, against one solo driver's)"
+ },
+ "owner_operator_linehaul_share": {
+  "value": 0.68,
+  "source": "USA Truck's published owner-operator split, 68% of linehaul (DC Velocity, 2017); fuel surcharge and detention go to the owner in full"
+ },
+ "owner_operator_carrier_cost_per_day_usd": {
+  "value": 45.0,
+  "source": "assumption: no public source fetched (the carrier's trailer and cargo/liability insurance for a leased-on owner-operator)"
+ },
+ "owner_operator_cost_per_mile_usd": {
+  "value": 0.611,
+  "source": "ATRI Operational Costs of Trucking 2024 Update, Table 8 (2023 average per mile): an owner-operator's own costs per mile besides fuel (repair, tires, permits, tolls, 75% of truck/trailer payments for the tractor, 50% of insurance); the shares are assumptions"
+ },
+ "owner_operator_net_floor_per_mile_usd": {
+  "value": 0.6,
+  "source": "assumption: no public source fetched (the least an owner-operator clears per mile, after their own costs and fuel, to take a trip)"
+ },
+ "owner_operator_pay_per_mile_atri_usd": {
+  "value": 2.1,
+  "source": "ATRI 2024 Update, Table 16 (2023 contracted owner-operator pay per mile): for comparison"
+ },
+ "overhead_per_unit_per_day_usd": {
+  "value": 60.0,
+  "source": "assumption: no public source fetched: what ATRI's marginal costs leave out (dispatch, the office, safety, IT), set so the re-planner's operating margins land near ATRI's truckload margins (2024 Update, Table 21: 10% in 2021, 8% in 2022, 3% in 2023). The same for every seat and week, so it changes no score"
+ },
+ "temp_driver_hourly_usd": {
+  "value": 40.0,
+  "source": "assumption: no public source fetched (a staffing agency's bill rate for a CDL-A driver)"
+ },
+ "temp_driver_minimum_hours_per_day": {
+  "value": 8.0,
+  "source": "assumption: no public source fetched"
+ },
+ "detention_free_hours": {
+  "value": 2.0,
+  "source": "assumption: no public source fetched (common contract term)"
+ },
+ "detention_rate_per_hour_usd": {
+  "value": 75.0,
+  "source": "assumption: no public source fetched (paid by the shipper to the carrier)"
+ },
+ "tonu_fee_usd": {
+  "value": 150.0,
+  "source": "assumption: no public source fetched (truck ordered, not used)"
+ }
+}

@@ -1,0 +1,1490 @@
+{
+ "unit": "thousand tons a year by truck (FAF5 dms_mode 1), all trade types, between the board's FAF zones; a border node's lanes are its zone's trade with the partner country times its share of the zone's truck crossings",
+ "years": [
+  "2023",
+  "2024"
+ ],
+ "reefer_sctg2": [
+  "03",
+  "05",
+  "07"
+ ],
+ "border_nodes": {
+  "MFE": {
+   "zone": "489",
+   "partner": "802",
+   "share": 0.7839,
+   "valley_trucks": 2337152,
+   "zone_trucks": 2981367,
+   "years": [
+    "2023",
+    "2024"
+   ],
+   "valley_ports": [
+    "Hidalgo",
+    "Brownsville",
+    "Progreso",
+    "Roma",
+    "Rio Grande City"
+   ]
+  }
+ },
+ "lanes": [
+  {
+   "orig": "AUS",
+   "dest": "BMT",
+   "tons_2023": 38.514,
+   "tons_2024": 37.699,
+   "reefer_tons_2023": 0.003,
+   "reefer_tons_2024": 0.003
+  },
+  {
+   "orig": "AUS",
+   "dest": "BTR",
+   "tons_2023": 55.438,
+   "tons_2024": 53.564,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "AUS",
+   "dest": "CRP",
+   "tons_2023": 377.425,
+   "tons_2024": 346.328,
+   "reefer_tons_2023": 6.887,
+   "reefer_tons_2024": 7.166
+  },
+  {
+   "orig": "AUS",
+   "dest": "DAL",
+   "tons_2023": 5804.926,
+   "tons_2024": 5618.563,
+   "reefer_tons_2023": 24.651,
+   "reefer_tons_2024": 25.782
+  },
+  {
+   "orig": "AUS",
+   "dest": "HOU",
+   "tons_2023": 9724.114,
+   "tons_2024": 9524.072,
+   "reefer_tons_2023": 134.844,
+   "reefer_tons_2024": 141.131
+  },
+  {
+   "orig": "AUS",
+   "dest": "LAR",
+   "tons_2023": 588.778,
+   "tons_2024": 625.424,
+   "reefer_tons_2023": 55.92,
+   "reefer_tons_2024": 59.046
+  },
+  {
+   "orig": "AUS",
+   "dest": "LCH",
+   "tons_2023": 63.467,
+   "tons_2024": 61.098,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "AUS",
+   "dest": "MEM",
+   "tons_2023": 16.767,
+   "tons_2024": 17.679,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "AUS",
+   "dest": "MFE",
+   "tons_2023": 663.13,
+   "tons_2024": 705.83,
+   "reefer_tons_2023": 20.695,
+   "reefer_tons_2024": 22.077
+  },
+  {
+   "orig": "AUS",
+   "dest": "NOL",
+   "tons_2023": 11.376,
+   "tons_2024": 11.795,
+   "reefer_tons_2023": 2.108,
+   "reefer_tons_2024": 2.231
+  },
+  {
+   "orig": "AUS",
+   "dest": "OKC",
+   "tons_2023": 155.812,
+   "tons_2024": 157.706,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "AUS",
+   "dest": "SA",
+   "tons_2023": 5051.752,
+   "tons_2024": 5134.203,
+   "reefer_tons_2023": 78.559,
+   "reefer_tons_2024": 78.818
+  },
+  {
+   "orig": "AUS",
+   "dest": "TUL",
+   "tons_2023": 10.827,
+   "tons_2024": 10.718,
+   "reefer_tons_2023": 0.979,
+   "reefer_tons_2024": 1.036
+  },
+  {
+   "orig": "BMT",
+   "dest": "AUS",
+   "tons_2023": 15.396,
+   "tons_2024": 16.053,
+   "reefer_tons_2023": 0.443,
+   "reefer_tons_2024": 0.433
+  },
+  {
+   "orig": "BMT",
+   "dest": "BTR",
+   "tons_2023": 220.849,
+   "tons_2024": 233.214,
+   "reefer_tons_2023": 10.772,
+   "reefer_tons_2024": 11.333
+  },
+  {
+   "orig": "BMT",
+   "dest": "CRP",
+   "tons_2023": 38.226,
+   "tons_2024": 33.807,
+   "reefer_tons_2023": 0.531,
+   "reefer_tons_2024": 0.533
+  },
+  {
+   "orig": "BMT",
+   "dest": "DAL",
+   "tons_2023": 239.315,
+   "tons_2024": 248.228,
+   "reefer_tons_2023": 2.753,
+   "reefer_tons_2024": 2.904
+  },
+  {
+   "orig": "BMT",
+   "dest": "HOU",
+   "tons_2023": 5936.457,
+   "tons_2024": 6022.531,
+   "reefer_tons_2023": 49.256,
+   "reefer_tons_2024": 50.364
+  },
+  {
+   "orig": "BMT",
+   "dest": "LAR",
+   "tons_2023": 161.55,
+   "tons_2024": 173.268,
+   "reefer_tons_2023": 15.76,
+   "reefer_tons_2024": 16.643
+  },
+  {
+   "orig": "BMT",
+   "dest": "LCH",
+   "tons_2023": 1677.034,
+   "tons_2024": 1736.779,
+   "reefer_tons_2023": 6.134,
+   "reefer_tons_2024": 6.202
+  },
+  {
+   "orig": "BMT",
+   "dest": "MEM",
+   "tons_2023": 57.011,
+   "tons_2024": 59.445,
+   "reefer_tons_2023": 0.024,
+   "reefer_tons_2024": 0.024
+  },
+  {
+   "orig": "BMT",
+   "dest": "MFE",
+   "tons_2023": 187.026,
+   "tons_2024": 199.305,
+   "reefer_tons_2023": 5.846,
+   "reefer_tons_2024": 6.237
+  },
+  {
+   "orig": "BMT",
+   "dest": "NOL",
+   "tons_2023": 80.037,
+   "tons_2024": 83.489,
+   "reefer_tons_2023": 5.676,
+   "reefer_tons_2024": 5.915
+  },
+  {
+   "orig": "BMT",
+   "dest": "OKC",
+   "tons_2023": 32.218,
+   "tons_2024": 33.929,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "BMT",
+   "dest": "SA",
+   "tons_2023": 222.869,
+   "tons_2024": 230.473,
+   "reefer_tons_2023": 0.302,
+   "reefer_tons_2024": 0.303
+  },
+  {
+   "orig": "BMT",
+   "dest": "TUL",
+   "tons_2023": 9.825,
+   "tons_2024": 9.901,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "BTR",
+   "dest": "AUS",
+   "tons_2023": 20.619,
+   "tons_2024": 21.045,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "BTR",
+   "dest": "BMT",
+   "tons_2023": 1143.779,
+   "tons_2024": 1200.467,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "BTR",
+   "dest": "CRP",
+   "tons_2023": 63.684,
+   "tons_2024": 35.105,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "BTR",
+   "dest": "DAL",
+   "tons_2023": 313.788,
+   "tons_2024": 325.703,
+   "reefer_tons_2023": 7.003,
+   "reefer_tons_2024": 6.904
+  },
+  {
+   "orig": "BTR",
+   "dest": "HOU",
+   "tons_2023": 1683.328,
+   "tons_2024": 1776.06,
+   "reefer_tons_2023": 1.063,
+   "reefer_tons_2024": 0.691
+  },
+  {
+   "orig": "BTR",
+   "dest": "LAR",
+   "tons_2023": 68.054,
+   "tons_2024": 81.553,
+   "reefer_tons_2023": 1.833,
+   "reefer_tons_2024": 3.861
+  },
+  {
+   "orig": "BTR",
+   "dest": "LCH",
+   "tons_2023": 761.379,
+   "tons_2024": 789.686,
+   "reefer_tons_2023": 59.198,
+   "reefer_tons_2024": 58.361
+  },
+  {
+   "orig": "BTR",
+   "dest": "MEM",
+   "tons_2023": 27.875,
+   "tons_2024": 27.819,
+   "reefer_tons_2023": 6.007,
+   "reefer_tons_2024": 5.922
+  },
+  {
+   "orig": "BTR",
+   "dest": "MFE",
+   "tons_2023": 3.058,
+   "tons_2024": 3.178,
+   "reefer_tons_2023": 0.019,
+   "reefer_tons_2024": 0.01
+  },
+  {
+   "orig": "BTR",
+   "dest": "NOL",
+   "tons_2023": 9883.206,
+   "tons_2024": 10504.657,
+   "reefer_tons_2023": 4192.955,
+   "reefer_tons_2024": 4358.396
+  },
+  {
+   "orig": "BTR",
+   "dest": "OKC",
+   "tons_2023": 17.705,
+   "tons_2024": 18.519,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "BTR",
+   "dest": "SA",
+   "tons_2023": 20.636,
+   "tons_2024": 20.94,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "BTR",
+   "dest": "TUL",
+   "tons_2023": 2.098,
+   "tons_2024": 2.032,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "CRP",
+   "dest": "AUS",
+   "tons_2023": 201.908,
+   "tons_2024": 196.887,
+   "reefer_tons_2023": 21.232,
+   "reefer_tons_2024": 22.203
+  },
+  {
+   "orig": "CRP",
+   "dest": "BMT",
+   "tons_2023": 10.122,
+   "tons_2024": 9.997,
+   "reefer_tons_2023": 2.197,
+   "reefer_tons_2024": 2.195
+  },
+  {
+   "orig": "CRP",
+   "dest": "BTR",
+   "tons_2023": 3.818,
+   "tons_2024": 2.894,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "CRP",
+   "dest": "DAL",
+   "tons_2023": 2065.097,
+   "tons_2024": 2092.408,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "CRP",
+   "dest": "HOU",
+   "tons_2023": 3403.289,
+   "tons_2024": 3449.353,
+   "reefer_tons_2023": 41.03,
+   "reefer_tons_2024": 42.905
+  },
+  {
+   "orig": "CRP",
+   "dest": "LAR",
+   "tons_2023": 309.112,
+   "tons_2024": 322.575,
+   "reefer_tons_2023": 15.09,
+   "reefer_tons_2024": 15.873
+  },
+  {
+   "orig": "CRP",
+   "dest": "LCH",
+   "tons_2023": 0.021,
+   "tons_2024": 0.02,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "CRP",
+   "dest": "MEM",
+   "tons_2023": 0.068,
+   "tons_2024": 0.068,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "CRP",
+   "dest": "MFE",
+   "tons_2023": 166.024,
+   "tons_2024": 177.016,
+   "reefer_tons_2023": 5.19,
+   "reefer_tons_2024": 5.537
+  },
+  {
+   "orig": "CRP",
+   "dest": "NOL",
+   "tons_2023": 0.404,
+   "tons_2024": 0.486,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "CRP",
+   "dest": "OKC",
+   "tons_2023": 35.003,
+   "tons_2024": 35.16,
+   "reefer_tons_2023": 31.005,
+   "reefer_tons_2024": 31.119
+  },
+  {
+   "orig": "CRP",
+   "dest": "SA",
+   "tons_2023": 594.739,
+   "tons_2024": 610.454,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "CRP",
+   "dest": "TUL",
+   "tons_2023": 0.195,
+   "tons_2024": 0.193,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "DAL",
+   "dest": "AUS",
+   "tons_2023": 3263.73,
+   "tons_2024": 3243.707,
+   "reefer_tons_2023": 305.735,
+   "reefer_tons_2024": 305.993
+  },
+  {
+   "orig": "DAL",
+   "dest": "BMT",
+   "tons_2023": 186.796,
+   "tons_2024": 191.135,
+   "reefer_tons_2023": 8.488,
+   "reefer_tons_2024": 8.511
+  },
+  {
+   "orig": "DAL",
+   "dest": "BTR",
+   "tons_2023": 391.366,
+   "tons_2024": 374.444,
+   "reefer_tons_2023": 98.701,
+   "reefer_tons_2024": 98.647
+  },
+  {
+   "orig": "DAL",
+   "dest": "CRP",
+   "tons_2023": 5179.191,
+   "tons_2024": 5070.801,
+   "reefer_tons_2023": 92.939,
+   "reefer_tons_2024": 153.837
+  },
+  {
+   "orig": "DAL",
+   "dest": "HOU",
+   "tons_2023": 24302.272,
+   "tons_2024": 24233.55,
+   "reefer_tons_2023": 886.607,
+   "reefer_tons_2024": 887.477
+  },
+  {
+   "orig": "DAL",
+   "dest": "LAR",
+   "tons_2023": 2320.513,
+   "tons_2024": 2494.823,
+   "reefer_tons_2023": 277.247,
+   "reefer_tons_2024": 290.874
+  },
+  {
+   "orig": "DAL",
+   "dest": "LCH",
+   "tons_2023": 76.666,
+   "tons_2024": 76.288,
+   "reefer_tons_2023": 1.056,
+   "reefer_tons_2024": 1.06
+  },
+  {
+   "orig": "DAL",
+   "dest": "MEM",
+   "tons_2023": 229.42,
+   "tons_2024": 228.474,
+   "reefer_tons_2023": 33.043,
+   "reefer_tons_2024": 33.027
+  },
+  {
+   "orig": "DAL",
+   "dest": "MFE",
+   "tons_2023": 2893.338,
+   "tons_2024": 3083.32,
+   "reefer_tons_2023": 90.191,
+   "reefer_tons_2024": 96.217
+  },
+  {
+   "orig": "DAL",
+   "dest": "NOL",
+   "tons_2023": 703.523,
+   "tons_2024": 710.977,
+   "reefer_tons_2023": 50.314,
+   "reefer_tons_2024": 50.501
+  },
+  {
+   "orig": "DAL",
+   "dest": "OKC",
+   "tons_2023": 1479.568,
+   "tons_2024": 1512.093,
+   "reefer_tons_2023": 139.548,
+   "reefer_tons_2024": 140.15
+  },
+  {
+   "orig": "DAL",
+   "dest": "SA",
+   "tons_2023": 3166.797,
+   "tons_2024": 3114.18,
+   "reefer_tons_2023": 373.87,
+   "reefer_tons_2024": 375.382
+  },
+  {
+   "orig": "DAL",
+   "dest": "TUL",
+   "tons_2023": 980.654,
+   "tons_2024": 989.414,
+   "reefer_tons_2023": 122.696,
+   "reefer_tons_2024": 124.728
+  },
+  {
+   "orig": "HOU",
+   "dest": "AUS",
+   "tons_2023": 3621.795,
+   "tons_2024": 3650.141,
+   "reefer_tons_2023": 297.782,
+   "reefer_tons_2024": 300.78
+  },
+  {
+   "orig": "HOU",
+   "dest": "BMT",
+   "tons_2023": 10693.57,
+   "tons_2024": 11652.626,
+   "reefer_tons_2023": 475.33,
+   "reefer_tons_2024": 494.071
+  },
+  {
+   "orig": "HOU",
+   "dest": "BTR",
+   "tons_2023": 722.201,
+   "tons_2024": 730.072,
+   "reefer_tons_2023": 4.327,
+   "reefer_tons_2024": 4.038
+  },
+  {
+   "orig": "HOU",
+   "dest": "CRP",
+   "tons_2023": 2349.904,
+   "tons_2024": 2321.066,
+   "reefer_tons_2023": 57.307,
+   "reefer_tons_2024": 56.846
+  },
+  {
+   "orig": "HOU",
+   "dest": "DAL",
+   "tons_2023": 10790.496,
+   "tons_2024": 10905.734,
+   "reefer_tons_2023": 534.584,
+   "reefer_tons_2024": 554.816
+  },
+  {
+   "orig": "HOU",
+   "dest": "LAR",
+   "tons_2023": 2524.475,
+   "tons_2024": 2683.428,
+   "reefer_tons_2023": 229.245,
+   "reefer_tons_2024": 240.379
+  },
+  {
+   "orig": "HOU",
+   "dest": "LCH",
+   "tons_2023": 496.322,
+   "tons_2024": 501.701,
+   "reefer_tons_2023": 28.279,
+   "reefer_tons_2024": 28.478
+  },
+  {
+   "orig": "HOU",
+   "dest": "MEM",
+   "tons_2023": 137.663,
+   "tons_2024": 143.899,
+   "reefer_tons_2023": 24.227,
+   "reefer_tons_2024": 25.639
+  },
+  {
+   "orig": "HOU",
+   "dest": "MFE",
+   "tons_2023": 2428.459,
+   "tons_2024": 2585.246,
+   "reefer_tons_2023": 75.836,
+   "reefer_tons_2024": 80.903
+  },
+  {
+   "orig": "HOU",
+   "dest": "NOL",
+   "tons_2023": 755.418,
+   "tons_2024": 754.369,
+   "reefer_tons_2023": 127.402,
+   "reefer_tons_2024": 126.837
+  },
+  {
+   "orig": "HOU",
+   "dest": "OKC",
+   "tons_2023": 621.431,
+   "tons_2024": 665.644,
+   "reefer_tons_2023": 10.024,
+   "reefer_tons_2024": 9.983
+  },
+  {
+   "orig": "HOU",
+   "dest": "SA",
+   "tons_2023": 8390.294,
+   "tons_2024": 8583.116,
+   "reefer_tons_2023": 613.361,
+   "reefer_tons_2024": 619.503
+  },
+  {
+   "orig": "HOU",
+   "dest": "TUL",
+   "tons_2023": 817.437,
+   "tons_2024": 863.52,
+   "reefer_tons_2023": 1.2,
+   "reefer_tons_2024": 1.194
+  },
+  {
+   "orig": "LAR",
+   "dest": "AUS",
+   "tons_2023": 937.569,
+   "tons_2024": 994.648,
+   "reefer_tons_2023": 149.005,
+   "reefer_tons_2024": 144.72
+  },
+  {
+   "orig": "LAR",
+   "dest": "BMT",
+   "tons_2023": 182.163,
+   "tons_2024": 193.26,
+   "reefer_tons_2023": 29.021,
+   "reefer_tons_2024": 28.187
+  },
+  {
+   "orig": "LAR",
+   "dest": "BTR",
+   "tons_2023": 14.958,
+   "tons_2024": 16.91,
+   "reefer_tons_2023": 0.381,
+   "reefer_tons_2024": 0.646
+  },
+  {
+   "orig": "LAR",
+   "dest": "CRP",
+   "tons_2023": 489.153,
+   "tons_2024": 522.405,
+   "reefer_tons_2023": 38.134,
+   "reefer_tons_2024": 37.07
+  },
+  {
+   "orig": "LAR",
+   "dest": "DAL",
+   "tons_2023": 3780.135,
+   "tons_2024": 4018.024,
+   "reefer_tons_2023": 551.221,
+   "reefer_tons_2024": 535.521
+  },
+  {
+   "orig": "LAR",
+   "dest": "HOU",
+   "tons_2023": 4025.339,
+   "tons_2024": 4257.019,
+   "reefer_tons_2023": 529.715,
+   "reefer_tons_2024": 515.91
+  },
+  {
+   "orig": "LAR",
+   "dest": "LCH",
+   "tons_2023": 4.33,
+   "tons_2024": 4.952,
+   "reefer_tons_2023": 0.11,
+   "reefer_tons_2024": 0.187
+  },
+  {
+   "orig": "LAR",
+   "dest": "MEM",
+   "tons_2023": 110.084,
+   "tons_2024": 104.417,
+   "reefer_tons_2023": 0.886,
+   "reefer_tons_2024": 0.518
+  },
+  {
+   "orig": "LAR",
+   "dest": "MFE",
+   "tons_2023": 32.915,
+   "tons_2024": 35.034,
+   "reefer_tons_2023": 1.029,
+   "reefer_tons_2024": 1.097
+  },
+  {
+   "orig": "LAR",
+   "dest": "NOL",
+   "tons_2023": 26.026,
+   "tons_2024": 29.777,
+   "reefer_tons_2023": 0.663,
+   "reefer_tons_2024": 1.126
+  },
+  {
+   "orig": "LAR",
+   "dest": "OKC",
+   "tons_2023": 714.195,
+   "tons_2024": 755.346,
+   "reefer_tons_2023": 4.528,
+   "reefer_tons_2024": 2.241
+  },
+  {
+   "orig": "LAR",
+   "dest": "SA",
+   "tons_2023": 1897.709,
+   "tons_2024": 1985.067,
+   "reefer_tons_2023": 207.087,
+   "reefer_tons_2024": 202.522
+  },
+  {
+   "orig": "LAR",
+   "dest": "TUL",
+   "tons_2023": 430.587,
+   "tons_2024": 449.361,
+   "reefer_tons_2023": 3.617,
+   "reefer_tons_2024": 1.79
+  },
+  {
+   "orig": "LCH",
+   "dest": "AUS",
+   "tons_2023": 17.963,
+   "tons_2024": 21.761,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "LCH",
+   "dest": "BMT",
+   "tons_2023": 696.421,
+   "tons_2024": 721.477,
+   "reefer_tons_2023": 1.798,
+   "reefer_tons_2024": 1.794
+  },
+  {
+   "orig": "LCH",
+   "dest": "BTR",
+   "tons_2023": 346.838,
+   "tons_2024": 363.249,
+   "reefer_tons_2023": 0.05,
+   "reefer_tons_2024": 0.052
+  },
+  {
+   "orig": "LCH",
+   "dest": "CRP",
+   "tons_2023": 2.532,
+   "tons_2024": 3.071,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "LCH",
+   "dest": "DAL",
+   "tons_2023": 39.123,
+   "tons_2024": 44.348,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "LCH",
+   "dest": "HOU",
+   "tons_2023": 649.731,
+   "tons_2024": 687.978,
+   "reefer_tons_2023": 1.491,
+   "reefer_tons_2024": 1.499
+  },
+  {
+   "orig": "LCH",
+   "dest": "LAR",
+   "tons_2023": 57.636,
+   "tons_2024": 62.719,
+   "reefer_tons_2023": 0.593,
+   "reefer_tons_2024": 1.249
+  },
+  {
+   "orig": "LCH",
+   "dest": "MEM",
+   "tons_2023": 17.338,
+   "tons_2024": 16.786,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "LCH",
+   "dest": "MFE",
+   "tons_2023": 0.989,
+   "tons_2024": 1.028,
+   "reefer_tons_2023": 0.006,
+   "reefer_tons_2024": 0.003
+  },
+  {
+   "orig": "LCH",
+   "dest": "NOL",
+   "tons_2023": 6694.297,
+   "tons_2024": 6779.218,
+   "reefer_tons_2023": 2684.713,
+   "reefer_tons_2024": 2495.73
+  },
+  {
+   "orig": "LCH",
+   "dest": "OKC",
+   "tons_2023": 9.336,
+   "tons_2024": 9.191,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "LCH",
+   "dest": "SA",
+   "tons_2023": 48.815,
+   "tons_2024": 53.814,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "LCH",
+   "dest": "TUL",
+   "tons_2023": 9.485,
+   "tons_2024": 9.938,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "MEM",
+   "dest": "AUS",
+   "tons_2023": 8.043,
+   "tons_2024": 7.805,
+   "reefer_tons_2023": 0.094,
+   "reefer_tons_2024": 0.09
+  },
+  {
+   "orig": "MEM",
+   "dest": "BMT",
+   "tons_2023": 7.345,
+   "tons_2024": 7.336,
+   "reefer_tons_2023": 5.402,
+   "reefer_tons_2024": 5.355
+  },
+  {
+   "orig": "MEM",
+   "dest": "BTR",
+   "tons_2023": 47.552,
+   "tons_2024": 49.074,
+   "reefer_tons_2023": 6.229,
+   "reefer_tons_2024": 6.175
+  },
+  {
+   "orig": "MEM",
+   "dest": "CRP",
+   "tons_2023": 1.007,
+   "tons_2024": 1.007,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "MEM",
+   "dest": "DAL",
+   "tons_2023": 263.039,
+   "tons_2024": 263.797,
+   "reefer_tons_2023": 11.929,
+   "reefer_tons_2024": 11.825
+  },
+  {
+   "orig": "MEM",
+   "dest": "HOU",
+   "tons_2023": 89.853,
+   "tons_2024": 92.749,
+   "reefer_tons_2023": 7.648,
+   "reefer_tons_2024": 7.581
+  },
+  {
+   "orig": "MEM",
+   "dest": "LAR",
+   "tons_2023": 196.371,
+   "tons_2024": 197.649,
+   "reefer_tons_2023": 67.588,
+   "reefer_tons_2024": 64.808
+  },
+  {
+   "orig": "MEM",
+   "dest": "LCH",
+   "tons_2023": 3.712,
+   "tons_2024": 3.786,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "MEM",
+   "dest": "MFE",
+   "tons_2023": 10.178,
+   "tons_2024": 9.936,
+   "reefer_tons_2023": 0.856,
+   "reefer_tons_2024": 0.479
+  },
+  {
+   "orig": "MEM",
+   "dest": "NOL",
+   "tons_2023": 92.644,
+   "tons_2024": 105.867,
+   "reefer_tons_2023": 22.005,
+   "reefer_tons_2024": 36.614
+  },
+  {
+   "orig": "MEM",
+   "dest": "OKC",
+   "tons_2023": 33.946,
+   "tons_2024": 34.632,
+   "reefer_tons_2023": 5.455,
+   "reefer_tons_2024": 5.407
+  },
+  {
+   "orig": "MEM",
+   "dest": "SA",
+   "tons_2023": 29.645,
+   "tons_2024": 30.609,
+   "reefer_tons_2023": 0.192,
+   "reefer_tons_2024": 0.191
+  },
+  {
+   "orig": "MEM",
+   "dest": "TUL",
+   "tons_2023": 32.462,
+   "tons_2024": 33.129,
+   "reefer_tons_2023": 4.355,
+   "reefer_tons_2024": 4.317
+  },
+  {
+   "orig": "MFE",
+   "dest": "AUS",
+   "tons_2023": 419.288,
+   "tons_2024": 407.483,
+   "reefer_tons_2023": 225.392,
+   "reefer_tons_2024": 223.451
+  },
+  {
+   "orig": "MFE",
+   "dest": "BMT",
+   "tons_2023": 81.679,
+   "tons_2024": 79.372,
+   "reefer_tons_2023": 43.9,
+   "reefer_tons_2024": 43.522
+  },
+  {
+   "orig": "MFE",
+   "dest": "BTR",
+   "tons_2023": 1.891,
+   "tons_2024": 1.876,
+   "reefer_tons_2023": 0.089,
+   "reefer_tons_2024": 0.074
+  },
+  {
+   "orig": "MFE",
+   "dest": "CRP",
+   "tons_2023": 104.259,
+   "tons_2024": 101.313,
+   "reefer_tons_2023": 56.035,
+   "reefer_tons_2024": 55.553
+  },
+  {
+   "orig": "MFE",
+   "dest": "DAL",
+   "tons_2023": 1547.098,
+   "tons_2024": 1503.988,
+   "reefer_tons_2023": 831.498,
+   "reefer_tons_2024": 824.338
+  },
+  {
+   "orig": "MFE",
+   "dest": "HOU",
+   "tons_2023": 1407.533,
+   "tons_2024": 1367.82,
+   "reefer_tons_2023": 756.58,
+   "reefer_tons_2024": 750.064
+  },
+  {
+   "orig": "MFE",
+   "dest": "LAR",
+   "tons_2023": 54.247,
+   "tons_2024": 52.735,
+   "reefer_tons_2023": 29.16,
+   "reefer_tons_2024": 28.909
+  },
+  {
+   "orig": "MFE",
+   "dest": "LCH",
+   "tons_2023": 0.547,
+   "tons_2024": 0.543,
+   "reefer_tons_2023": 0.026,
+   "reefer_tons_2024": 0.022
+  },
+  {
+   "orig": "MFE",
+   "dest": "MEM",
+   "tons_2023": 14.812,
+   "tons_2024": 10.533,
+   "reefer_tons_2023": 0.136,
+   "reefer_tons_2024": 0.006
+  },
+  {
+   "orig": "MFE",
+   "dest": "NOL",
+   "tons_2023": 3.295,
+   "tons_2024": 3.268,
+   "reefer_tons_2023": 0.155,
+   "reefer_tons_2024": 0.13
+  },
+  {
+   "orig": "MFE",
+   "dest": "OKC",
+   "tons_2023": 6.186,
+   "tons_2024": 4.874,
+   "reefer_tons_2023": 0.184,
+   "reefer_tons_2024": 0.019
+  },
+  {
+   "orig": "MFE",
+   "dest": "SA",
+   "tons_2023": 490.049,
+   "tons_2024": 476.217,
+   "reefer_tons_2023": 263.39,
+   "reefer_tons_2024": 261.122
+  },
+  {
+   "orig": "MFE",
+   "dest": "TUL",
+   "tons_2023": 4.941,
+   "tons_2024": 3.893,
+   "reefer_tons_2023": 0.147,
+   "reefer_tons_2024": 0.015
+  },
+  {
+   "orig": "NOL",
+   "dest": "AUS",
+   "tons_2023": 22.856,
+   "tons_2024": 22.722,
+   "reefer_tons_2023": 3.006,
+   "reefer_tons_2024": 2.981
+  },
+  {
+   "orig": "NOL",
+   "dest": "BMT",
+   "tons_2023": 104.427,
+   "tons_2024": 106.493,
+   "reefer_tons_2023": 2.663,
+   "reefer_tons_2024": 2.787
+  },
+  {
+   "orig": "NOL",
+   "dest": "BTR",
+   "tons_2023": 5103.102,
+   "tons_2024": 5108.126,
+   "reefer_tons_2023": 284.359,
+   "reefer_tons_2024": 293.404
+  },
+  {
+   "orig": "NOL",
+   "dest": "CRP",
+   "tons_2023": 13.046,
+   "tons_2024": 13.329,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.004
+  },
+  {
+   "orig": "NOL",
+   "dest": "DAL",
+   "tons_2023": 185.168,
+   "tons_2024": 186.208,
+   "reefer_tons_2023": 70.183,
+   "reefer_tons_2024": 69.37
+  },
+  {
+   "orig": "NOL",
+   "dest": "HOU",
+   "tons_2023": 573.73,
+   "tons_2024": 605.685,
+   "reefer_tons_2023": 36.693,
+   "reefer_tons_2024": 35.788
+  },
+  {
+   "orig": "NOL",
+   "dest": "LAR",
+   "tons_2023": 96.864,
+   "tons_2024": 114.709,
+   "reefer_tons_2023": 2.422,
+   "reefer_tons_2024": 5.104
+  },
+  {
+   "orig": "NOL",
+   "dest": "LCH",
+   "tons_2023": 1832.425,
+   "tons_2024": 1820.968,
+   "reefer_tons_2023": 80.878,
+   "reefer_tons_2024": 88.351
+  },
+  {
+   "orig": "NOL",
+   "dest": "MEM",
+   "tons_2023": 111.462,
+   "tons_2024": 160.499,
+   "reefer_tons_2023": 5.736,
+   "reefer_tons_2024": 5.388
+  },
+  {
+   "orig": "NOL",
+   "dest": "MFE",
+   "tons_2023": 4.035,
+   "tons_2024": 4.151,
+   "reefer_tons_2023": 0.025,
+   "reefer_tons_2024": 0.014
+  },
+  {
+   "orig": "NOL",
+   "dest": "OKC",
+   "tons_2023": 5.944,
+   "tons_2024": 6.311,
+   "reefer_tons_2023": 0.125,
+   "reefer_tons_2024": 0.123
+  },
+  {
+   "orig": "NOL",
+   "dest": "SA",
+   "tons_2023": 59.843,
+   "tons_2024": 59.009,
+   "reefer_tons_2023": 27.432,
+   "reefer_tons_2024": 27.104
+  },
+  {
+   "orig": "NOL",
+   "dest": "TUL",
+   "tons_2023": 29.961,
+   "tons_2024": 29.518,
+   "reefer_tons_2023": 26.049,
+   "reefer_tons_2024": 25.68
+  },
+  {
+   "orig": "OKC",
+   "dest": "AUS",
+   "tons_2023": 69.325,
+   "tons_2024": 70.062,
+   "reefer_tons_2023": 0.091,
+   "reefer_tons_2024": 0.091
+  },
+  {
+   "orig": "OKC",
+   "dest": "BMT",
+   "tons_2023": 1.875,
+   "tons_2024": 1.805,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "OKC",
+   "dest": "BTR",
+   "tons_2023": 39.39,
+   "tons_2024": 39.472,
+   "reefer_tons_2023": 24.139,
+   "reefer_tons_2024": 24.013
+  },
+  {
+   "orig": "OKC",
+   "dest": "CRP",
+   "tons_2023": 14.365,
+   "tons_2024": 14.351,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "OKC",
+   "dest": "DAL",
+   "tons_2023": 1111.606,
+   "tons_2024": 1111.466,
+   "reefer_tons_2023": 135.871,
+   "reefer_tons_2024": 134.884
+  },
+  {
+   "orig": "OKC",
+   "dest": "HOU",
+   "tons_2023": 259.054,
+   "tons_2024": 254.109,
+   "reefer_tons_2023": 46.465,
+   "reefer_tons_2024": 45.743
+  },
+  {
+   "orig": "OKC",
+   "dest": "LAR",
+   "tons_2023": 34.387,
+   "tons_2024": 30.674,
+   "reefer_tons_2023": 1.933,
+   "reefer_tons_2024": 1.178
+  },
+  {
+   "orig": "OKC",
+   "dest": "LCH",
+   "tons_2023": 7.262,
+   "tons_2024": 7.015,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "OKC",
+   "dest": "MEM",
+   "tons_2023": 29.069,
+   "tons_2024": 29.182,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "OKC",
+   "dest": "MFE",
+   "tons_2023": 6.363,
+   "tons_2024": 3.185,
+   "reefer_tons_2023": 0.502,
+   "reefer_tons_2024": 0.484
+  },
+  {
+   "orig": "OKC",
+   "dest": "NOL",
+   "tons_2023": 0.971,
+   "tons_2024": 0.937,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "OKC",
+   "dest": "SA",
+   "tons_2023": 92.762,
+   "tons_2024": 91.875,
+   "reefer_tons_2023": 0.005,
+   "reefer_tons_2024": 0.005
+  },
+  {
+   "orig": "OKC",
+   "dest": "TUL",
+   "tons_2023": 3232.383,
+   "tons_2024": 3405.244,
+   "reefer_tons_2023": 109.955,
+   "reefer_tons_2024": 108.78
+  },
+  {
+   "orig": "SA",
+   "dest": "AUS",
+   "tons_2023": 14426.194,
+   "tons_2024": 14210.08,
+   "reefer_tons_2023": 309.67,
+   "reefer_tons_2024": 310.582
+  },
+  {
+   "orig": "SA",
+   "dest": "BMT",
+   "tons_2023": 165.348,
+   "tons_2024": 166.995,
+   "reefer_tons_2023": 12.067,
+   "reefer_tons_2024": 12.059
+  },
+  {
+   "orig": "SA",
+   "dest": "BTR",
+   "tons_2023": 42.695,
+   "tons_2024": 40.808,
+   "reefer_tons_2023": 3.288,
+   "reefer_tons_2024": 3.286
+  },
+  {
+   "orig": "SA",
+   "dest": "CRP",
+   "tons_2023": 2851.413,
+   "tons_2024": 2866.058,
+   "reefer_tons_2023": 80.039,
+   "reefer_tons_2024": 80.034
+  },
+  {
+   "orig": "SA",
+   "dest": "DAL",
+   "tons_2023": 4144.563,
+   "tons_2024": 4236.237,
+   "reefer_tons_2023": 78.178,
+   "reefer_tons_2024": 79.409
+  },
+  {
+   "orig": "SA",
+   "dest": "HOU",
+   "tons_2023": 14620.644,
+   "tons_2024": 14562.606,
+   "reefer_tons_2023": 298.832,
+   "reefer_tons_2024": 303.122
+  },
+  {
+   "orig": "SA",
+   "dest": "LAR",
+   "tons_2023": 2378.18,
+   "tons_2024": 2562.935,
+   "reefer_tons_2023": 135.133,
+   "reefer_tons_2024": 139.631
+  },
+  {
+   "orig": "SA",
+   "dest": "LCH",
+   "tons_2023": 42.262,
+   "tons_2024": 43.754,
+   "reefer_tons_2023": 13.084,
+   "reefer_tons_2024": 13.076
+  },
+  {
+   "orig": "SA",
+   "dest": "MEM",
+   "tons_2023": 15.459,
+   "tons_2024": 15.438,
+   "reefer_tons_2023": 0.352,
+   "reefer_tons_2024": 0.351
+  },
+  {
+   "orig": "SA",
+   "dest": "MFE",
+   "tons_2023": 555.508,
+   "tons_2024": 591.553,
+   "reefer_tons_2023": 17.321,
+   "reefer_tons_2024": 18.478
+  },
+  {
+   "orig": "SA",
+   "dest": "NOL",
+   "tons_2023": 53.315,
+   "tons_2024": 54.659,
+   "reefer_tons_2023": 2.085,
+   "reefer_tons_2024": 2.084
+  },
+  {
+   "orig": "SA",
+   "dest": "OKC",
+   "tons_2023": 38.284,
+   "tons_2024": 38.609,
+   "reefer_tons_2023": 0.016,
+   "reefer_tons_2024": 0.016
+  },
+  {
+   "orig": "SA",
+   "dest": "TUL",
+   "tons_2023": 64.855,
+   "tons_2024": 67.826,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "TUL",
+   "dest": "AUS",
+   "tons_2023": 90.501,
+   "tons_2024": 88.354,
+   "reefer_tons_2023": 0.082,
+   "reefer_tons_2024": 0.081
+  },
+  {
+   "orig": "TUL",
+   "dest": "BMT",
+   "tons_2023": 11.642,
+   "tons_2024": 11.657,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "TUL",
+   "dest": "BTR",
+   "tons_2023": 43.504,
+   "tons_2024": 44.118,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "TUL",
+   "dest": "CRP",
+   "tons_2023": 0.992,
+   "tons_2024": 1.127,
+   "reefer_tons_2023": 0.001,
+   "reefer_tons_2024": 0.001
+  },
+  {
+   "orig": "TUL",
+   "dest": "DAL",
+   "tons_2023": 874.416,
+   "tons_2024": 870.208,
+   "reefer_tons_2023": 25.078,
+   "reefer_tons_2024": 25.004
+  },
+  {
+   "orig": "TUL",
+   "dest": "HOU",
+   "tons_2023": 394.395,
+   "tons_2024": 385.282,
+   "reefer_tons_2023": 8.657,
+   "reefer_tons_2024": 8.232
+  },
+  {
+   "orig": "TUL",
+   "dest": "LAR",
+   "tons_2023": 104.02,
+   "tons_2024": 103.32,
+   "reefer_tons_2023": 2.296,
+   "reefer_tons_2024": 1.4
+  },
+  {
+   "orig": "TUL",
+   "dest": "LCH",
+   "tons_2023": 1.704,
+   "tons_2024": 1.737,
+   "reefer_tons_2023": 0.0,
+   "reefer_tons_2024": 0.0
+  },
+  {
+   "orig": "TUL",
+   "dest": "MEM",
+   "tons_2023": 125.951,
+   "tons_2024": 129.286,
+   "reefer_tons_2023": 12.802,
+   "reefer_tons_2024": 12.681
+  },
+  {
+   "orig": "TUL",
+   "dest": "MFE",
+   "tons_2023": 7.561,
+   "tons_2024": 3.784,
+   "reefer_tons_2023": 0.596,
+   "reefer_tons_2024": 0.575
+  },
+  {
+   "orig": "TUL",
+   "dest": "NOL",
+   "tons_2023": 32.976,
+   "tons_2024": 33.007,
+   "reefer_tons_2023": 2.254,
+   "reefer_tons_2024": 2.233
+  },
+  {
+   "orig": "TUL",
+   "dest": "OKC",
+   "tons_2023": 1641.693,
+   "tons_2024": 1688.855,
+   "reefer_tons_2023": 263.451,
+   "reefer_tons_2024": 260.324
+  },
+  {
+   "orig": "TUL",
+   "dest": "SA",
+   "tons_2023": 48.436,
+   "tons_2024": 48.539,
+   "reefer_tons_2023": 4.695,
+   "reefer_tons_2024": 4.655
+  }
+ ]
+}

@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentenv-trucksim"
+version = "0.0.1"
+description = "TruckSimEnv: a multi-seat trucking operations environment for the AgentEnv Framework."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.11.4"
+# The sim core needs OR-Tools (the re-planner the rival carriers play); the env server adds agent-env's game env.
+dependencies = [
+    "ortools>=9.10,<10",
+    "agentenv-framework-protocol>=0.1.340,<0.2",
+    "agentenv-game-env @ https://github.com/earakely-scale/agentenv-game-env/archive/e9316f823ef37d9cecd90bb171ef50d9ddf375e7.tar.gz",
+    "mcp>=1.25,<2",
+    "pydantic>=2,<3",
+]
+
+[project.optional-dependencies]
+data = ["xlrd>=2.0,<3", "openpyxl>=3.1,<4", "httpx>=0.27"]   # scripts/build_data.py
+dev = ["pytest>=8,<10", "anyio>=4", "click>=8"]
+video = ["pillow>=10,<13", "playwright>=1.45,<2"]   # scripts/build_models.py, scripts/render_cinema.py
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project.entry-points."agent_env.bundles"]
+trucksim = "agentenv_trucksim.bundles"     # the bundle folder is agentenv_trucksim/bundles/trucksim/
+trucksim-train = "agentenv_trucksim.bundles"   # the train split: agentenv_trucksim/bundles/trucksim-train/
+
+[project.entry-points."agent_env.cli_plugins"]
+trucksim = "agentenv_trucksim.cli:trucksim"
+
+[tool.hatch.build.targets.wheel]
+packages = ["trucksim_core", "src/agentenv_trucksim"]
+# trucksim_core/data_pack links to data/ in a checkout; a wheel carries the data pack's files themselves.
+exclude = ["trucksim_core/data_pack"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"data/roads.json" = "trucksim_core/data_pack/roads.json"
+"data/diesel.json" = "trucksim_core/data_pack/diesel.json"
+"data/freight.json" = "trucksim_core/data_pack/freight.json"
+"data/weather.json" = "trucksim_core/data_pack/weather.json"
+"data/closures.json" = "trucksim_core/data_pack/closures.json"
+"data/road_shapes.json" = "trucksim_core/data_pack/road_shapes.json"
+"data/hos.json" = "trucksim_core/data_pack/hos.json"
+"data/costs.json" = "trucksim_core/data_pack/costs.json"
+"data/manifest.json" = "trucksim_core/data_pack/manifest.json"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TruckSimEnv: viewer mock (V1 map replay + V2 compare)</title>
+<style>
+/* Tokens: the dataviz reference palette. Truck states use categorical slots 1-3 (validated all-pairs,
+   light and dark); "stopped" is neutral ink; detention and breakdown are status colors, always with an icon + label. */
+.viz-root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,.10); --road: #dcdbd4; --city: #52514e;
+  --loaded: #2a78d6; --deadhead: #eb6834; --resting: #1baf7a; --stopped: #898781;
+  --warning: #fab219; --critical: #d03b3b; --good-text: #006300; --wash: rgba(11,11,11,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10); --road: #3a3a37; --city: #c3c2b7;
+    --loaded: #3987e5; --deadhead: #d95926; --resting: #199e70; --good-text: #0ca30c; --wash: rgba(255,255,255,.05);
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10); --road: #3a3a37; --city: #c3c2b7;
+  --loaded: #3987e5; --deadhead: #d95926; --resting: #199e70; --good-text: #0ca30c; --wash: rgba(255,255,255,.05);
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.viz-root { background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; min-height: 100vh; padding: 20px 24px 40px; }
+h1 { font-size: 20px; margin: 0; font-weight: 650; }
+h2 { font-size: 14px; margin: 0 0 8px; font-weight: 650; }
+h3 { font-size: 12px; margin: 0 0 6px; font-weight: 650; color: var(--ink2); text-transform: uppercase; letter-spacing: .04em; }
+.sub { color: var(--ink2); margin-top: 2px; }
+.mock { display: inline-block; margin-top: 8px; padding: 3px 8px; border-radius: 6px; background: var(--wash); box-shadow: inset 0 0 0 1px var(--ring); color: var(--ink2); }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+button { font: inherit; color: var(--ink); background: var(--surface); border: 0; box-shadow: inset 0 0 0 1px var(--ring); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+button:hover { background: var(--wash); }
+.card { background: var(--surface); border-radius: 10px; box-shadow: 0 0 0 1px var(--ring); padding: 14px 16px; }
+.grid-main { display: grid; grid-template-columns: minmax(520px, 1.25fr) minmax(380px, 1fr); gap: 14px; margin-top: 14px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+@media (max-width: 1100px) { .grid-main, .grid-2 { grid-template-columns: 1fr; } }
+.kpis { display: flex; gap: 10px; flex-wrap: wrap; }
+.kpi { min-width: 120px; padding: 8px 12px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--ring); background: var(--surface); }
+.kpi .v { font-size: 22px; font-weight: 650; }
+.kpi .l { color: var(--ink2); font-size: 12px; }
+.kpi.hero .v { font-size: 28px; }
+.scrub { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.scrub input[type=range] { flex: 1; accent-color: var(--ink2); }
+.clock { font-weight: 650; min-width: 190px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--ink2); font-size: 12px; margin: 2px 0 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.ln { width: 18px; height: 0; border-top: 2px solid; display: inline-block; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+tr.sel td { background: var(--wash); }
+tbody tr { cursor: pointer; }
+.st { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.feed, .calls { max-height: 236px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.feed li, .calls li { padding: 5px 0; border-bottom: 1px solid var(--grid); display: grid; grid-template-columns: 74px 1fr; gap: 8px; }
+.feed .t, .calls .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+.calls code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+.calls .r { color: var(--ink2); font-size: 12px; }
+.calls li.future { opacity: .4; }
+.calls li.think .r { font-style: italic; }
+.hos { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.hos div { padding: 6px 10px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--ring); }
+.hos b { font-size: 16px; }
+.hos .l { color: var(--ink2); font-size: 12px; }
+.note { color: var(--ink2); font-size: 12px; margin-top: 6px; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--ring), 0 6px 18px rgba(0,0,0,.12); border-radius: 8px; padding: 8px 10px; font-size: 12px; max-width: 320px; display: none; z-index: 10; }
+#tip .h { font-weight: 650; margin-bottom: 2px; }
+svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+.ladder td:first-child, .tiers td:first-child { white-space: nowrap; font-weight: 650; }
+.yes { color: var(--good-text); font-weight: 650; }
+.no { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <div class="top">
+    <div>
+      <h1>TruckSimEnv · viewer mock</h1>
+      <div class="sub">Week <b>tx-w38-busy-0</b>: 6 trucks out of Dallas, Mon–Sun · replaying <b>Claude Opus 5.5</b>, compared with GPT-6 Astra and the reference policies</div>
+      <div class="mock">Mock: every number is made up, the corridors are straight lines, and only Wed 08:00–20:00 is scripted</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="theme" type="button">Theme</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis" style="margin-top:14px"></div>
+
+  <div class="scrub card">
+    <button id="play" type="button">▶ Play</button>
+    <span class="clock" id="clock"></span>
+    <input id="t" type="range" min="8" max="20" step="0.0833" value="14" aria-label="Virtual time, Wednesday">
+  </div>
+
+  <div class="grid-main">
+    <div class="card">
+      <h2>Fleet map</h2>
+      <div class="legend" id="stateLegend"></div>
+      <svg id="map" viewBox="0 0 640 590" width="100%" role="img" aria-label="Map of the Texas Triangle with trucks by state"></svg>
+      <div class="note">◇ = open load offers at a city (hover for the list). Click a truck or a fleet row to load its driver's log below.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <h2>Fleet board</h2>
+        <table id="fleet"><thead><tr><th>Truck</th><th>State</th><th>Driver</th><th>Where / what</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Events</h2>
+        <ul class="feed" id="feed"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <h2>Profit race on this week (same seed, same luck)</h2>
+        <button id="tbl" type="button">Table</button>
+      </div>
+      <div class="legend" id="raceLegend"></div>
+      <svg id="race" viewBox="0 0 620 250" width="100%" role="img" aria-label="Cumulative profit by model over the week"></svg>
+      <div id="raceTable" style="display:none"></div>
+      <div class="note">Each model plays the same pre-drawn world: the same offers, diesel, weather, and T3's tire failing at the same mileage. Runs differ only because of their decisions.</div>
+    </div>
+    <div class="card">
+      <h2 id="eldTitle">Driver log (ELD)</h2>
+      <svg id="eld" viewBox="0 0 620 176" width="100%" role="img" aria-label="24-hour duty-status log for the selected driver"></svg>
+      <div class="hos" id="hos"></div>
+      <div class="note">Solid: what happened. Dashed gray: what the env's driver model plans next under the FMCSA hours-of-service rules. The operator never places rests or fuel stops itself.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>The operator's tool calls, synced to the replay</h2>
+    <ul class="calls" id="calls"></ul>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>What the operator controls</h2>
+      <table class="ladder">
+        <thead><tr><th>Level</th><th>Decisions</th><th>Cadence</th><th>v1</th></tr></thead>
+        <tbody>
+          <tr><td>L0 Strategy</td><td>lease/return trucks, hire/fire, pay, home-time policy, fuel contracts</td><td>weekly</td><td class="no">v2</td></tr>
+          <tr><td>L1 Commercial</td><td>accept / decline / bid on load offers</td><td>per offer</td><td class="yes">yes</td></tr>
+          <tr><td>L2 Dispatch</td><td>driver + truck → load chain, deadhead repositioning, send home</td><td>per assignment</td><td class="yes">yes</td></tr>
+          <tr><td>L3 Exceptions</td><td>breakdown: roadside / tow / relay; reschedule; maintenance timing</td><td>per event</td><td class="yes">yes</td></tr>
+          <tr><td>L4 Execution</td><td>route in a corridor, rest placement, fuel stops, speed</td><td>continuous</td><td class="no">never (env)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Visual fidelity tiers</h2>
+      <table class="tiers">
+        <thead><tr><th>Tier</th><th>What</th><th>Cost</th><th>This mock</th></tr></thead>
+        <tbody>
+          <tr><td>V0</td><td>charts only: P&amp;L, Gantt, ELD</td><td>low</td><td class="yes">ELD, P&amp;L</td></tr>
+          <tr><td>V1</td><td>2D map replay: deck.gl TripsLayer trucks on real interstate polylines (MapLibre), loads, diesel, weather, synced transcript</td><td>medium</td><td class="yes">schematic version</td></tr>
+          <tr><td>V2</td><td>compare: models on one seed, ghost fleets, profit race</td><td>medium</td><td class="yes">profit race</td></tr>
+          <tr><td>V3</td><td>3D (three.js) trucks and yards; films</td><td>high</td><td class="no">later</td></tr>
+        </tbody>
+      </table>
+      <div class="note">The viewer is a pure function of the scenario plus the env's event log (JSONL), so any recorded run, including those in an HF dataset, can be replayed.</div>
+    </div>
+  </div>
+</div>
+<div id="tip"></div>
+
+<script>
+"use strict";
+// ---------- World (schematic; real build: OSRM/NHPN polylines and EIA/FAF data) ----------
+const CITIES = {
+  LAR: { n: "Laredo", lat: 27.53, lon: -99.49, dx: 8, dy: 4 },
+  SA:  { n: "San Antonio", lat: 29.42, lon: -98.49, dx: -8, dy: 14, a: "end" },
+  AUS: { n: "Austin", lat: 30.27, lon: -97.74, dx: -8, dy: 4, a: "end" },
+  WAC: { n: "Waco", lat: 31.55, lon: -97.15, dx: -8, dy: 4, a: "end" },
+  DAL: { n: "Dallas", lat: 32.78, lon: -96.80, dx: 8, dy: -7 },
+  FW:  { n: "Fort Worth", lat: 32.75, lon: -97.33, dx: -8, dy: -7, a: "end" },
+  OKC: { n: "Oklahoma City", lat: 35.47, lon: -97.52, dx: 8, dy: 4 },
+  HOU: { n: "Houston", lat: 29.76, lon: -95.37, dx: 8, dy: 15 },
+  CRP: { n: "Corpus Christi", lat: 27.80, lon: -97.40, dx: 8, dy: 4 },
+  BMT: { n: "Beaumont", lat: 30.08, lon: -94.13, dx: 6, dy: 15 },
+  SHV: { n: "Shreveport", lat: 32.53, lon: -93.75, dx: 8, dy: 4 },
+  TXK: { n: "Texarkana", lat: 33.43, lon: -94.05, dx: 8, dy: -5 },
+  LR:  { n: "Little Rock", lat: 34.75, lon: -92.29, dx: 6, dy: 16 },
+  MEM: { n: "Memphis", lat: 35.15, lon: -90.05, dx: -8, dy: -8, a: "end" },
+  BTR: { n: "Baton Rouge", lat: 30.45, lon: -91.15, dx: -6, dy: -8, a: "end" },
+  NOL: { n: "New Orleans", lat: 29.95, lon: -90.07, dx: -6, dy: 16, a: "end" },
+};
+// [from, to, miles, route, label this edge]
+const EDGES = [
+  ["LAR", "SA", 157, "I-35", true], ["SA", "AUS", 80, "I-35", false], ["AUS", "WAC", 102, "I-35", false],
+  ["WAC", "DAL", 96, "I-35E", false], ["WAC", "FW", 88, "I-35W", false], ["DAL", "FW", 32, "I-30", false],
+  ["DAL", "OKC", 206, "I-35", true], ["SA", "CRP", 143, "I-37", true], ["HOU", "CRP", 210, "US-59", true],
+  ["SA", "HOU", 197, "I-10", true], ["HOU", "BMT", 85, "I-10", false], ["BMT", "BTR", 185, "I-10", true],
+  ["BTR", "NOL", 80, "I-10", false], ["DAL", "HOU", 240, "I-45", true], ["DAL", "TXK", 180, "I-30", true],
+  ["TXK", "LR", 142, "I-30", false], ["DAL", "SHV", 188, "I-20", true], ["SHV", "TXK", 72, "I-49", true],
+  ["LR", "MEM", 137, "I-40", true, -1], ["MEM", "NOL", 395, "I-55", true],
+];
+const STATES = {
+  loaded:    { label: "Loaded",               color: "var(--loaded)" },
+  deadhead:  { label: "Deadhead (empty)",     color: "var(--deadhead)" },
+  resting:   { label: "Off duty / HOS rest",  color: "var(--resting)" },
+  stopped:   { label: "Stopped (dock, idle)", color: "var(--stopped)" },
+  detention: { label: "Detention",            color: "var(--warning)", icon: "⏱" },
+  broken:    { label: "Broken down",          color: "var(--critical)", icon: "⚠" },
+};
+// Times are hours of Wednesday. legs: [t0, t1, mile0, mile1] along path. duty: [t0, t1, OFF|SB|D|ON].
+// windows: when each 14-h duty window started. prior: on-duty hours in the 7 days before Wednesday.
+const TRUCKS = [
+  { id: "T1", driver: "Maria R.", path: ["LAR", "SA", "AUS", "WAC", "DAL"], legs: [[7.5, 11, 0, 192.5], [11.5, 16, 192.5, 435]],
+    states: [[0, 7.5, "stopped", "Loading L-2207 at Laredo"], [7.5, 16, "loaded", "L-2207 auto parts → Dallas, appt 18:00"],
+             [16, 17, "stopped", "Unloading L-2207 in Dallas"], [17, 24, "resting", "Off duty in Dallas"]],
+    duty: [[0, 5.5, "SB"], [5.5, 7.5, "ON"], [7.5, 11, "D"], [11, 11.5, "OFF"], [11.5, 16, "D"], [16, 17, "ON"], [17, 24, "OFF"]],
+    windows: [5.5], prior: 31 },
+  { id: "T2", driver: "Dev P.", path: ["DAL", "HOU"], legs: [[13, 17.33, 0, 240]],
+    states: [[0, 13, "stopped", "Idle in Dallas, available"], [13, 17.33, "deadhead", "Empty → Houston for L-2231 (pickup Thu 06:00)"],
+             [17.33, 24, "resting", "Off duty in Houston"]],
+    duty: [[0, 6, "SB"], [6, 12.5, "OFF"], [12.5, 13, "ON"], [13, 17.33, "D"], [17.33, 17.5, "ON"], [17.5, 24, "OFF"]],
+    windows: [12.5], prior: 38 },
+  { id: "T3", driver: "Sam K.", path: ["HOU", "BMT", "BTR", "NOL"], legs: [[12.5, 13.67, 0, 64], [15.67, 20.87, 64, 350]],
+    states: [[0, 10.5, "resting", "Off duty in Houston"], [10.5, 12.5, "stopped", "Loading L-2229 at Houston"],
+             [12.5, 13.67, "loaded", "L-2229 produce → New Orleans, appt Thu 08:00"],
+             [13.67, 15.67, "broken", "Tire blowout on I-10, 64 mi out of Houston; roadside repair until 15:40"],
+             [15.67, 20.87, "loaded", "L-2229 → New Orleans, appt Thu 08:00"], [20.87, 24, "resting", "Sleeper berth in New Orleans"]],
+    duty: [[0, 8, "SB"], [8, 10.5, "OFF"], [10.5, 12.5, "ON"], [12.5, 13.67, "D"], [13.67, 15.67, "ON"], [15.67, 20.87, "D"], [20.87, 21.2, "ON"], [21.2, 24, "SB"]],
+    windows: [10.5], prior: 44 },
+  { id: "T4", driver: "Lena O.", path: ["OKC", "DAL", "WAC", "AUS", "SA", "LAR"], legs: [[2.5, 8, 0, 302], [8.5, 11.8, 302, 484], [22.8, 24, 484, 550]],
+    states: [[0, 2.5, "resting", "Off duty in Oklahoma City"], [2.5, 11.8, "deadhead", "Empty → San Antonio, repositioning toward Laredo freight"],
+             [11.8, 22.3, "resting", "HOS 10-h reset in San Antonio until 22:20"], [22.3, 24, "deadhead", "Empty → Laredo for L-2240 (pickup Thu 06:00)"]],
+    duty: [[0, 2, "SB"], [2, 2.5, "ON"], [2.5, 8, "D"], [8, 8.5, "OFF"], [8.5, 11.8, "D"], [11.8, 12.3, "ON"], [12.3, 22.3, "OFF"], [22.3, 22.8, "ON"], [22.8, 24, "D"]],
+    windows: [2, 22.3], prior: 52 },
+  { id: "T5", driver: "Joe M.", path: ["HOU", "SA"], legs: [[17.5, 20.5, 0, 165]],
+    states: [[0, 7, "resting", "Off duty in Houston"], [7, 7.67, "deadhead", "Empty → dock H-14 (local)"],
+             [7.67, 10, "stopped", "At dock H-14, free time until 10:00"], [10, 17.5, "detention", "Detention at dock H-14, billed $75/h"],
+             [17.5, 20.5, "loaded", "L-2238 → San Antonio, appt Thu 06:00"], [20.5, 24, "resting", "14-h window over: stopped 32 mi short of San Antonio"]],
+    duty: [[0, 6.5, "SB"], [6.5, 7, "ON"], [7, 7.67, "D"], [7.67, 17.5, "ON"], [17.5, 20.5, "D"], [20.5, 24, "SB"]],
+    windows: [6.5], prior: 40 },
+  { id: "T6", driver: "Ana C.", path: ["MEM", "LR", "TXK", "DAL"], legs: [[7, 11, 0, 220], [11.5, 15.85, 220, 459]],
+    states: [[0, 7, "stopped", "Loading L-2219 at Memphis"], [7, 15.85, "loaded", "L-2219 paper goods → Dallas, appt 17:00"],
+             [15.85, 16.85, "stopped", "Unloading L-2219 in Dallas"], [16.85, 24, "resting", "Off duty in Dallas"]],
+    duty: [[0, 6.5, "SB"], [6.5, 7, "ON"], [7, 11, "D"], [11, 11.5, "OFF"], [11.5, 15.85, "D"], [15.85, 16.85, "ON"], [16.85, 24, "OFF"]],
+    windows: [6.5], prior: 36 },
+];
+// Open offers: shown at their city from t0 until t1 (expiry or acceptance).
+const OFFERS = [
+  { id: "L-2250", city: "NOL", t0: 8, t1: 14.5, txt: "New Orleans → Houston · $1,240 · expires 14:30" },
+  { id: "L-2240", city: "LAR", t0: 12, t1: 12.05, txt: "Laredo → Dallas · $1,890" },
+  { id: "L-2241", city: "LAR", t0: 12, t1: 20, txt: "Laredo → Fort Worth · $1,760" },
+  { id: "L-2242", city: "LAR", t0: 12, t1: 16, txt: "Laredo → Oklahoma City · $2,450" },
+  { id: "L-2243", city: "OKC", t0: 12, t1: 24, txt: "Oklahoma City → Memphis · $1,310" },
+  { id: "L-2251", city: "HOU", t0: 18, t1: 24, txt: "Houston → Shreveport · $980" },
+  { id: "L-2252", city: "LAR", t0: 18, t1: 24, txt: "Laredo → Dallas · $1,940" },
+  { id: "L-2253", city: "SHV", t0: 18, t1: 24, txt: "Shreveport → Dallas · $720" },
+];
+// [t, truck, kind, text]; kind: info | offer | watch | warn | crit | good
+const EVENTS = [
+  [7, "T6", "info", "T6 Ana left Memphis with L-2219 → Dallas (appt 17:00)."],
+  [7.5, "T1", "info", "T1 Maria left Laredo with L-2207 → Dallas (appt 18:00)."],
+  [8, null, "offer", "Offer L-2250 New Orleans → Houston posted ($1,240, expires 14:30)."],
+  [10, "T5", "warn", "T5 free time over at dock H-14: detention starts at $75/h."],
+  [11.8, "T4", "info", "T4 Lena reached San Antonio; HOS 10-h reset until 22:20."],
+  [12, null, "watch", "Watch 10: 4 new offers (Laredo ×3, Oklahoma City ×1)."],
+  [13, "T2", "info", "T2 Dev deadheading Dallas → Houston for L-2231."],
+  [13.67, "T3", "crit", "T3 tire blowout on I-10, 64 mi east of Houston. It fails at the same mileage (41,212 mi) in every model's run."],
+  [14.5, null, "offer", "L-2250 expired with nobody on it."],
+  [15.67, "T3", "info", "T3 repaired ($640); resumes → New Orleans."],
+  [15.85, "T6", "good", "T6 delivered L-2219 in Dallas, on time: +$1,980."],
+  [16, "T1", "good", "T1 delivered L-2207 in Dallas, on time: +$2,140."],
+  [17.33, "T2", "info", "T2 arrived Houston."],
+  [17.5, "T5", "warn", "T5 loaded after 7.5 h of detention, billed +$562. Its 14-h window ends 20:30."],
+  [18, null, "watch", "Watch 11: 3 new offers (Houston, Laredo, Shreveport)."],
+  [20.5, "T5", "warn", "T5 out of hours 32 mi short of San Antonio: L-2238 will be about 1 h late Thu."],
+];
+// [t, call, result, kind]
+const CALLS = [
+  [12.0, "advance()", "→ watch 10, Wed 12:00: 4 new offers; T4 in a 10-h reset until 22:20"],
+  [12.02, 'list_loads(region="Laredo")', "→ L-2240 → Dallas $1,890 · L-2241 → Fort Worth $1,760 · L-2242 → Oklahoma City $2,450"],
+  [12.03, 'plan_trip(driver="D4", truck="T4", load_ids=["L-2242"])', "→ infeasible: Laredo → Oklahoma City is 641 mi, 11.7 h of driving; Lena has 11 h per shift"],
+  [12.04, 'plan_trip(driver="D4", truck="T4", load_ids=["L-2240"])', "→ feasible after the reset: deadhead 157 mi, arrives Thu 01:40 for the 06:00–09:00 pickup, est. profit $610"],
+  [12.05, 'accept_load("L-2240")', "→ accepted"],
+  [12.06, 'dispatch([{driver:"D4", truck:"T4", load_ids:["L-2240"]}, {driver:"D2", truck:"T2", load_ids:["L-2231"]}])', "→ 2 dispatched; T2 leaves at 13:00, T4 after its reset"],
+  [12.07, "advance()", "→ interrupted at Wed 13:40: T3 breakdown"],
+  [13.68, 'get_truck("T3")', "→ left steer tire failed. Options: roadside 2 h $640 · tow 6 h $1,900 · relay (no empty truck within 3 h)"],
+  [13.69, "(model)", "Roadside is cheapest, and a 2 h delay still makes L-2229's Thu 08:00 appointment.", "think"],
+  [13.7, 'handle_breakdown("T3", option="roadside")', "→ crew ETA 15:40"],
+  [13.71, "advance()", "→ Wed 15:51: T6 delivered"],
+];
+
+// ---------- Week P&L series for the race (deterministic) ----------
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const BREAKDOWN_H = 48 + 13.67, BREAKDOWN_COST = 640; // the same CRN breakdown in every run
+const EARN_HOURS = 8; // a load's revenue is earned over its last 8 h in transit
+function makeRun({ seed, target, costPerHour, fixed = [], avoid = null }) {
+  // Stratified delivery times: one per equal slice of the week, so revenue arrives steadily as it does for a busy fleet.
+  const rnd = mulberry32(seed), raw = [], n = 20, slice = 158 / n;
+  for (let i = 0; i < n; i++) {
+    const h = 8 + (i + rnd()) * slice, r = 0.7 + rnd() * 0.6;
+    if (avoid && h >= avoid[0] && h <= avoid[1]) continue;
+    raw.push([h, r]);
+  }
+  const fixedSum = fixed.reduce((s, [, a]) => s + a, 0);
+  const scale = (target + costPerHour * 168 + BREAKDOWN_COST - fixedSum) / raw.reduce((s, [, r]) => s + r, 0);
+  const deliveries = raw.map(([h, r]) => [h, r * scale]).concat(fixed).sort((a, b) => a[0] - b[0]);
+  const revenue = h => deliveries.reduce((s, [dh, a]) => s + a * Math.max(0, Math.min(1, (h - (dh - EARN_HOURS)) / EARN_HOURS)), 0);
+  const profit = h => revenue(h) - costPerHour * h - (h >= BREAKDOWN_H ? BREAKDOWN_COST : 0);
+  return { deliveries, revenue, profit, values: Array.from({ length: 169 }, (_, h) => profit(h)) };
+}
+const RUNS = [
+  { key: "opus", short: "Opus 5.5", label: "Opus 5.5 (this run)", stroke: "var(--ink)", dash: "", width: 2,
+    ...makeRun({ seed: 7, target: 9870, costPerHour: 205, fixed: [[48 + 15.85, 1980], [48 + 16, 2140], [48 + 17.5, 562]], avoid: [55, 69] }) },
+  { key: "astra", short: "GPT-6 Astra", label: "GPT-6 Astra", stroke: "var(--ink2)", dash: "", width: 2, ...makeRun({ seed: 11, target: 8450, costPerHour: 210 }) },
+  { key: "rolling", short: "Rolling (anchor)", label: "Rolling re-planner (anchor)", stroke: "var(--muted)", dash: "6 4", width: 1.5, ...makeRun({ seed: 3, target: 9300, costPerHour: 200 }) },
+  { key: "naive", short: "Naive", label: "Naive greedy", stroke: "var(--muted)", dash: "2 3", width: 1.5, ...makeRun({ seed: 5, target: 3200, costPerHour: 185 }) },
+];
+
+// ---------- helpers ----------
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const money = v => (v < 0 ? "−" : "") + "$" + Math.abs(Math.round(v)).toLocaleString("en-US");
+const hm = h => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
+const clockOf = h => { const m = Math.round(h * 60); return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const tip = document.getElementById("tip");
+function showTip(html, ev) { tip.innerHTML = html; tip.style.display = "block"; const x = Math.min(ev.clientX + 14, window.innerWidth - tip.offsetWidth - 8); tip.style.left = x + "px"; tip.style.top = (ev.clientY + 14) + "px"; }
+function hideTip() { tip.style.display = "none"; }
+const edgeOf = (a, b) => EDGES.find(e => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a));
+const intervalAt = (list, t) => list.find(([a, b]) => t >= a && t < b) || list[list.length - 1];
+
+// ---------- map ----------
+const LON0 = -101, LON1 = -89.3, LAT0 = 26.6, LAT1 = 36.2, KX = Math.cos(31.4 * Math.PI / 180);
+const MS = Math.min((640 - 48) / ((LON1 - LON0) * KX), (590 - 48) / (LAT1 - LAT0));
+const proj = (lat, lon) => [24 + (lon - LON0) * KX * MS, 24 + (LAT1 - lat) * MS];
+const P = Object.fromEntries(Object.entries(CITIES).map(([k, c]) => [k, proj(c.lat, c.lon)]));
+
+function milesAt(tr, t) {
+  let m = tr.legs[0][2];
+  for (const [t0, t1, m0, m1] of tr.legs) {
+    if (t < t0) return m;
+    if (t <= t1) return m0 + (m1 - m0) * (t - t0) / (t1 - t0);
+    m = m1;
+  }
+  return m;
+}
+function locate(tr, miles) { // -> {xy, a, b, into, edge}
+  let acc = 0;
+  for (let i = 0; i < tr.path.length - 1; i++) {
+    const a = tr.path[i], b = tr.path[i + 1], e = edgeOf(a, b);
+    if (miles <= acc + e[2] + 1e-9) {
+      const f = (miles - acc) / e[2], pa = P[a], pb = P[b];
+      return { xy: [pa[0] + (pb[0] - pa[0]) * f, pa[1] + (pb[1] - pa[1]) * f], a, b, into: miles - acc, edge: e };
+    }
+    acc += e[2];
+  }
+  const last = tr.path[tr.path.length - 1];
+  return { xy: P[last], a: last, b: last, into: 0, edge: null };
+}
+function whereText(tr, t) {
+  const loc = locate(tr, milesAt(tr, t));
+  if (!loc.edge || loc.into < 1) return CITIES[loc.a].n;
+  if (loc.edge[2] - loc.into < 1) return CITIES[loc.b].n;
+  return `${loc.edge[3]}, ${Math.round(loc.into)} mi past ${CITIES[loc.a].n} toward ${CITIES[loc.b].n}`;
+}
+function remainingPath(tr, t) { // points from the truck to the end of its last leg
+  const end = tr.legs[tr.legs.length - 1][3], m = milesAt(tr, t);
+  if (end - m < 1) return null;
+  const pts = [locate(tr, m).xy]; let acc = 0;
+  for (let i = 0; i < tr.path.length - 1; i++) {
+    acc += edgeOf(tr.path[i], tr.path[i + 1])[2];
+    if (acc > m && acc < end) pts.push(P[tr.path[i + 1]]);
+  }
+  pts.push(locate(tr, end).xy);
+  return pts;
+}
+
+const map = document.getElementById("map");
+const gRoads = el("g", {}, map), gLabels = el("g", {}, map), gRoutes = el("g", {}, map), gCities = el("g", {}, map), gPins = el("g", {}, map), gTrucks = el("g", {}, map);
+for (const [a, b, mi, route, lab, side = 1] of EDGES) {
+  const pa = P[a], pb = P[b];
+  const line = el("line", { x1: pa[0], y1: pa[1], x2: pb[0], y2: pb[1], stroke: "var(--road)", "stroke-width": 4, "stroke-linecap": "round" }, gRoads);
+  const hit = el("line", { x1: pa[0], y1: pa[1], x2: pb[0], y2: pb[1], stroke: "transparent", "stroke-width": 12 }, gRoads);
+  hit.addEventListener("mousemove", ev => showTip(`<div class="h">${route}</div>${CITIES[a].n} – ${CITIES[b].n} · ${mi} mi`, ev));
+  hit.addEventListener("mouseleave", hideTip);
+  if (lab) {
+    const dx = pb[0] - pa[0], dy = pb[1] - pa[1], len = Math.hypot(dx, dy);
+    el("text", { x: (pa[0] + pb[0]) / 2 + side * (-dy / len) * 10, y: (pa[1] + pb[1]) / 2 + side * (dx / len) * 10 + 3, "font-size": 10, fill: "var(--muted)", "text-anchor": "middle" }, gLabels).textContent = route;
+  }
+}
+for (const [k, c] of Object.entries(CITIES)) {
+  el("circle", { cx: P[k][0], cy: P[k][1], r: 3.5, fill: "var(--city)" }, gCities);
+  el("text", { x: P[k][0] + c.dx, y: P[k][1] + c.dy, "font-size": 11, fill: "var(--ink2)", "text-anchor": c.a || "start" }, gCities).textContent = c.n;
+}
+
+let selected = "T1", now = 14;
+for (const k of ["loaded", "deadhead", "resting", "stopped", "detention", "broken"]) {
+  const s = STATES[k], span = document.createElement("span");
+  span.innerHTML = `<i class="sw" style="background:${s.color}"></i>${s.icon ? s.icon + " " : ""}${s.label}`;
+  document.getElementById("stateLegend").appendChild(span);
+}
+
+function drawMap() {
+  gRoutes.replaceChildren(); gTrucks.replaceChildren(); gPins.replaceChildren();
+  // open offers
+  const byCity = {};
+  for (const o of OFFERS) if (now >= o.t0 && now < o.t1) (byCity[o.city] ||= []).push(o);
+  for (const [city, list] of Object.entries(byCity)) {
+    const [x, y] = P[city], g = el("g", { transform: `translate(${x - 14},${y - 16})` }, gPins);
+    el("rect", { x: -5, y: -5, width: 10, height: 10, transform: "rotate(45)", fill: "var(--surface)", stroke: "var(--ink2)", "stroke-width": 1.5 }, g);
+    el("text", { x: 0, y: 3.5, "font-size": 9, "text-anchor": "middle", fill: "var(--ink)", "font-weight": 650 }, g).textContent = list.length;
+    el("circle", { r: 12, fill: "transparent" }, g);
+    g.addEventListener("mousemove", ev => showTip(`<div class="h">${list.length} open offer${list.length > 1 ? "s" : ""} at ${CITIES[city].n}</div>${list.map(o => `${o.id}: ${o.txt}`).join("<br>")}`, ev));
+    g.addEventListener("mouseleave", hideTip);
+  }
+  // trucks
+  for (const tr of TRUCKS) {
+    const [, , st, note] = intervalAt(tr.states, now), s = STATES[st];
+    const rem = remainingPath(tr, now);
+    if (rem && (st === "loaded" || st === "deadhead")) el("polyline", { points: rem.map(p => p.join(",")).join(" "), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-opacity": 0.45, "stroke-linecap": "round", "stroke-linejoin": "round" }, gRoutes);
+    const [x, y] = locate(tr, milesAt(tr, now)).xy, g = el("g", { transform: `translate(${x},${y})`, style: "cursor:pointer" }, gTrucks);
+    if (tr.id === selected) el("circle", { r: 11.5, fill: "none", stroke: "var(--ink)", "stroke-width": 1.5 }, g);
+    el("circle", { r: 7, fill: s.color, stroke: "var(--surface)", "stroke-width": 2 }, g);
+    el("text", { x: 11, y: -9, "font-size": 11, "font-weight": 650, fill: "var(--ink)", stroke: "var(--surface)", "stroke-width": 3, "paint-order": "stroke" }, g).textContent = tr.id + (s.icon ? " " + s.icon : "");
+    el("circle", { r: 15, fill: "transparent" }, g);
+    g.addEventListener("mousemove", ev => showTip(`<div class="h">${tr.id} · ${tr.driver} · ${s.icon ? s.icon + " " : ""}${s.label}</div>${note}<br><span style="color:var(--ink2)">${whereText(tr, now)}</span>`, ev));
+    g.addEventListener("mouseleave", hideTip);
+    g.addEventListener("click", () => { selected = tr.id; render(); });
+  }
+}
+
+// ---------- fleet board, events, calls, KPIs ----------
+function drawFleet() {
+  const tb = document.querySelector("#fleet tbody"); tb.replaceChildren();
+  for (const tr of TRUCKS) {
+    const [, , st, note] = intervalAt(tr.states, now), s = STATES[st], row = document.createElement("tr");
+    if (tr.id === selected) row.className = "sel";
+    row.innerHTML = `<td><b>${tr.id}</b></td><td><span class="st"><i class="sw" style="background:${s.color}"></i>${s.icon ? s.icon + " " : ""}${s.label}</span></td><td>${tr.driver}</td><td>${note}<br><span style="color:var(--ink2)">${whereText(tr, now)}</span></td>`;
+    row.addEventListener("click", () => { selected = tr.id; render(); });
+    tb.appendChild(row);
+  }
+}
+const KIND_ICON = { info: "•", offer: "◇", watch: "◷", warn: "⏱", crit: "⚠", good: "✓" };
+function drawFeed() {
+  const ul = document.getElementById("feed"); ul.replaceChildren();
+  for (const [t, truck, kind, text] of EVENTS.filter(e => e[0] <= now).reverse()) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="t">Wed ${clockOf(t)}</span><span>${KIND_ICON[kind]} ${text}</span>`;
+    if (truck) { li.style.cursor = "pointer"; li.addEventListener("click", () => { selected = truck; render(); }); }
+    ul.appendChild(li);
+  }
+}
+function drawCalls() {
+  const ul = document.getElementById("calls"); ul.replaceChildren();
+  let lastPast = null;
+  for (const [t, call, res, kind] of CALLS) {
+    const li = document.createElement("li");
+    li.className = (t > now ? "future " : "") + (kind || "");
+    li.innerHTML = `<span class="t">Wed ${clockOf(t)}</span><span>${kind === "think" ? "" : `<code>${call}</code><br>`}<span class="r">${res}</span></span>`;
+    ul.appendChild(li);
+    if (t <= now) lastPast = li;
+  }
+  if (lastPast) ul.scrollTop = lastPast.offsetTop - ul.offsetTop - 120;
+}
+function drawKpis() {
+  const h = 48 + now, run = RUNS[0], rev = run.revenue(h), prof = run.profit(h);
+  const delivered = run.deliveries.filter(([dh]) => dh <= h && !(Math.abs(dh - (48 + 17.5)) < 1e-6)).length;
+  const tiles = [["Profit, week to date", money(prof), true], ["Revenue (earned)", money(rev)], ["Costs", money(rev - prof)], ["Loads delivered", String(delivered)], ["Diesel (mock), Gulf Coast · Midwest", "$3.41 · $3.58"]];
+  document.getElementById("kpis").innerHTML = tiles.map(([l, v, hero]) => `<div class="kpi${hero ? " hero" : ""}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  const watch = Math.floor((48 + now) / 6);
+  document.getElementById("clock").textContent = `Wed ${clockOf(now)} · watch ${watch}`;
+}
+
+// ---------- profit race ----------
+const race = document.getElementById("race"), RW = 620, RH = 250, RM = { l: 58, r: 150, t: 12, b: 26 };
+const allV = RUNS.flatMap(r => r.values), Y_STEP = 2500;
+const yMin = Math.floor(Math.min(...allV) / Y_STEP) * Y_STEP, yMax = Math.ceil(Math.max(...allV) / Y_STEP) * Y_STEP;
+const rx = h => RM.l + h / 168 * (RW - RM.l - RM.r), ry = v => RM.t + (yMax - v) / (yMax - yMin) * (RH - RM.t - RM.b);
+for (let v = yMin; v <= yMax; v += Y_STEP) {
+  el("line", { x1: RM.l, x2: RW - RM.r, y1: ry(v), y2: ry(v), stroke: v === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }, race);
+  el("text", { x: RM.l - 8, y: ry(v) + 4, "font-size": 11, fill: "var(--muted)", "text-anchor": "end", style: "font-variant-numeric:tabular-nums" }, race).textContent = money(v);
+}
+DAYS.forEach((d, i) => el("text", { x: rx(i * 24 + 12), y: RH - 8, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, race).textContent = d);
+for (let i = 0; i <= 7; i++) el("line", { x1: rx(i * 24), x2: rx(i * 24), y1: RH - RM.b, y2: RH - RM.b + 4, stroke: "var(--axis)" }, race);
+for (const r of [...RUNS].reverse()) el("path", { d: r.values.map((v, h) => `${h ? "L" : "M"}${rx(h).toFixed(1)},${ry(v).toFixed(1)}`).join(""), fill: "none", stroke: r.stroke, "stroke-width": r.width, "stroke-dasharray": r.dash, "stroke-linejoin": "round" }, race);
+// direct end labels, pushed apart so they never overlap
+const ends = RUNS.map(r => ({ r, y: ry(r.values[168]) })).sort((a, b) => a.y - b.y);
+for (let i = 1; i < ends.length; i++) ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 14);
+for (const { r, y } of ends) {
+  el("text", { x: RW - RM.r + 8, y: y + 4, "font-size": 11, fill: r.key === "opus" ? "var(--ink)" : "var(--ink2)", "font-weight": r.key === "opus" ? 650 : 400 }, race).textContent = `${r.short} ${money(r.values[168])}`;
+}
+const nowLine = el("line", { y1: RM.t, y2: RH - RM.b, stroke: "var(--ink2)", "stroke-width": 1 }, race);
+const nowText = el("text", { y: RM.t + 10, "font-size": 10, fill: "var(--ink2)", "text-anchor": "middle" }, race);
+const cross = el("g", { style: "display:none" }, race), crossLine = el("line", { y1: RM.t, y2: RH - RM.b, stroke: "var(--axis)", "stroke-width": 1 }, cross);
+const crossDots = RUNS.map(r => el("circle", { r: 4, fill: r.stroke, stroke: "var(--surface)", "stroke-width": 2 }, cross));
+const overlay = el("rect", { x: RM.l, y: RM.t, width: RW - RM.l - RM.r, height: RH - RM.t - RM.b, fill: "transparent" }, race);
+overlay.addEventListener("mousemove", ev => {
+  const pt = race.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  const loc = pt.matrixTransform(race.getScreenCTM().inverse());
+  const h = Math.max(0, Math.min(168, Math.round((loc.x - RM.l) / (RW - RM.l - RM.r) * 168)));
+  cross.style.display = ""; crossLine.setAttribute("x1", rx(h)); crossLine.setAttribute("x2", rx(h));
+  RUNS.forEach((r, i) => { crossDots[i].setAttribute("cx", rx(h)); crossDots[i].setAttribute("cy", ry(r.values[h])); });
+  const rows = [...RUNS].sort((a, b) => b.values[h] - a.values[h]).map(r => `<div style="display:flex;justify-content:space-between;gap:14px"><span><i class="ln" style="border-color:${r.stroke};border-top-style:${r.dash ? "dashed" : "solid"}"></i> ${r.label}</span><b>${money(r.values[h])}</b></div>`).join("");
+  showTip(`<div class="h">${DAYS[Math.min(6, Math.floor(h / 24))]} ${String(h % 24).padStart(2, "0")}:00</div>${rows}`, ev);
+});
+overlay.addEventListener("mouseleave", () => { cross.style.display = "none"; hideTip(); });
+document.getElementById("raceLegend").innerHTML = RUNS.map(r => `<span><i class="ln" style="border-color:${r.stroke};border-top-style:${r.dash === "6 4" ? "dashed" : r.dash ? "dotted" : "solid"}"></i>${r.label}</span>`).join("");
+document.getElementById("raceTable").innerHTML = `<table><thead><tr><th>End of</th>${RUNS.map(r => `<th>${r.label}</th>`).join("")}</tr></thead><tbody>${DAYS.map((d, i) => `<tr><td>${d}</td>${RUNS.map(r => `<td>${money(r.values[(i + 1) * 24])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+document.getElementById("tbl").addEventListener("click", ev => {
+  const t = document.getElementById("raceTable"), showing = t.style.display !== "none";
+  t.style.display = showing ? "none" : ""; race.style.display = showing ? "" : "none"; ev.target.textContent = showing ? "Table" : "Chart";
+});
+function drawRaceNow() { const x = rx(48 + now); nowLine.setAttribute("x1", x); nowLine.setAttribute("x2", x); nowText.setAttribute("x", x); nowText.textContent = "now"; }
+
+// ---------- ELD ----------
+const eld = document.getElementById("eld"), EW = 620, EM = { l: 132, r: 52, t: 22 }, ROW_H = 34;
+const ROWS = ["OFF", "SB", "D", "ON"], ROW_LABEL = { OFF: "Off duty", SB: "Sleeper berth", D: "Driving", ON: "On duty (not driving)" };
+const ex = h => EM.l + h / 24 * (EW - EM.l - EM.r), ey = code => EM.t + ROWS.indexOf(code) * ROW_H + ROW_H / 2;
+function drawEld() {
+  eld.replaceChildren();
+  const tr = TRUCKS.find(t => t.id === selected);
+  document.getElementById("eldTitle").textContent = `Driver log (ELD): ${tr.driver}, ${tr.id}, Wednesday`;
+  ROWS.forEach((code, i) => {
+    el("rect", { x: EM.l, y: EM.t + i * ROW_H, width: EW - EM.l - EM.r, height: ROW_H, fill: i % 2 ? "var(--wash)" : "transparent" }, eld);
+    el("text", { x: EM.l - 8, y: EM.t + i * ROW_H + ROW_H / 2 + 4, "font-size": 11, fill: "var(--ink2)", "text-anchor": "end" }, eld).textContent = ROW_LABEL[code];
+    const total = tr.duty.filter(d => d[2] === code).reduce((s, [a, b]) => s + b - a, 0);
+    el("text", { x: EW - EM.r + 8, y: EM.t + i * ROW_H + ROW_H / 2 + 4, "font-size": 11, fill: "var(--ink)", style: "font-variant-numeric:tabular-nums" }, eld).textContent = hm(total);
+  });
+  for (let h = 0; h <= 24; h++) {
+    el("line", { x1: ex(h), x2: ex(h), y1: EM.t, y2: EM.t + 4 * ROW_H, stroke: "var(--grid)", "stroke-width": 1 }, eld);
+    if (h % 2 === 0) el("text", { x: ex(h), y: EM.t - 7, "font-size": 10, fill: "var(--muted)", "text-anchor": "middle" }, eld).textContent = h === 0 || h === 24 ? "Mid" : h === 12 ? "Noon" : String(h > 12 ? h - 12 : h);
+  }
+  el("rect", { x: EM.l, y: EM.t, width: EW - EM.l - EM.r, height: 4 * ROW_H, fill: "none", stroke: "var(--axis)" }, eld);
+  const seg = (x1, y1, x2, y2, past) => el("line", { x1, y1, x2, y2, stroke: past ? "var(--ink)" : "var(--muted)", "stroke-width": 2, "stroke-dasharray": past ? "" : "4 3" }, eld);
+  tr.duty.forEach(([a, b, code], i) => {
+    const y = ey(code);
+    if (i > 0) seg(ex(a), ey(tr.duty[i - 1][2]), ex(a), y, a <= now);
+    if (b <= now) seg(ex(a), y, ex(b), y, true);
+    else if (a >= now) seg(ex(a), y, ex(b), y, false);
+    else { seg(ex(a), y, ex(now), y, true); seg(ex(now), y, ex(b), y, false); }
+    const hit = el("rect", { x: ex(a), y: y - ROW_H / 2, width: Math.max(2, ex(b) - ex(a)), height: ROW_H, fill: "transparent" }, eld);
+    hit.addEventListener("mousemove", ev => showTip(`<div class="h">${ROW_LABEL[code]}</div>${clockOf(a)}–${clockOf(b)} (${hm(b - a)})${a >= now ? "<br><i>planned</i>" : ""}`, ev));
+    hit.addEventListener("mouseleave", hideTip);
+  });
+  el("line", { x1: ex(now), x2: ex(now), y1: EM.t - 2, y2: EM.t + 4 * ROW_H + 2, stroke: "var(--ink2)", "stroke-width": 1 }, eld);
+  // HOS clocks at `now` (49 CFR 395: 11 h driving and 14 h on-duty window per shift, 70 h in 8 days)
+  const ws = tr.windows.filter(w => w <= now).pop();
+  const sumBetween = (codes, from, to) => tr.duty.filter(d => codes.includes(d[2])).reduce((s, [a, b]) => s + Math.max(0, Math.min(b, to) - Math.max(a, from)), 0);
+  const cur = intervalAt(tr.duty, now)[2];
+  const driveLeft = ws === undefined ? 11 : Math.max(0, 11 - sumBetween(["D"], ws, now));
+  const windowLeft = ws === undefined ? null : Math.max(0, ws + 14 - now);
+  const cycleLeft = 70 - tr.prior - sumBetween(["D", "ON"], 0, now);
+  let restNote = "";
+  if (cur === "OFF" || cur === "SB") {
+    let s = now; for (let i = tr.duty.length - 1; i >= 0; i--) { const [a, b, c] = tr.duty[i]; if (a < now && (c === "OFF" || c === "SB") && b >= s - 1e-9) s = Math.min(s, a); }
+    restNote = `<div><b>${hm(Math.min(10, now - s))}</b> <span class="l">of a 10:00 reset</span></div>`;
+  }
+  document.getElementById("hos").innerHTML =
+    `<div><b>${hm(driveLeft)}</b> <span class="l">driving left (11 h)</span></div>` +
+    `<div><b>${windowLeft === null ? "not started" : hm(windowLeft)}</b> <span class="l">window left (14 h)</span></div>` +
+    `<div><b>${hm(cycleLeft)}</b> <span class="l">cycle left (70 h / 8 days)</span></div>` + restNote;
+}
+
+// ---------- wiring ----------
+function render() { drawKpis(); drawMap(); drawFleet(); drawFeed(); drawCalls(); drawRaceNow(); drawEld(); }
+const slider = document.getElementById("t");
+slider.addEventListener("input", () => { now = +slider.value; render(); });
+let timer = null;
+document.getElementById("play").addEventListener("click", ev => {
+  if (timer) { clearInterval(timer); timer = null; ev.target.textContent = "▶ Play"; return; }
+  if (now >= 20) now = 8;
+  ev.target.textContent = "❚❚ Pause";
+  timer = setInterval(() => { now = Math.min(20, now + 0.05); slider.value = now; render(); if (now >= 20) { clearInterval(timer); timer = null; ev.target.textContent = "▶ Play"; } }, 50);
+});
+document.getElementById("theme").addEventListener("click", () => {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark";
+});
+const qTheme = new URLSearchParams(location.search).get("theme");
+if (qTheme === "light" || qTheme === "dark") document.documentElement.dataset.theme = qTheme;
+render();
+</script>
+</body>
+</html>

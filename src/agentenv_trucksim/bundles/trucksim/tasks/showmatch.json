@@ -1,0 +1,211 @@
+[
+ {
+  "id": "deploy",
+  "type": "deploy_env",
+  "env_id": "trucksim",
+  "ttl_seconds": 16200
+ },
+ {
+  "id": "operator-a",
+  "type": "deploy_agent",
+  "a2a_agent_id": "trucksim-llm",
+  "agent_name": "operator-a",
+  "env_ids": [],
+  "ttl_seconds": 16200,
+  "depends_on": [
+   {
+    "task_step_id": "deploy"
+   }
+  ]
+ },
+ {
+  "id": "operator-b",
+  "type": "deploy_agent",
+  "a2a_agent_id": "trucksim-llm",
+  "agent_name": "operator-b",
+  "env_ids": [],
+  "ttl_seconds": 16200,
+  "depends_on": [
+   {
+    "task_step_id": "deploy"
+   }
+  ]
+ },
+ {
+  "id": "operator-c",
+  "type": "deploy_agent",
+  "a2a_agent_id": "trucksim-llm",
+  "agent_name": "operator-c",
+  "env_ids": [],
+  "ttl_seconds": 16200,
+  "depends_on": [
+   {
+    "task_step_id": "deploy"
+   }
+  ]
+ },
+ {
+  "id": "lobby",
+  "type": "open_lobby",
+  "env_id": "trucksim",
+  "game_settings": {
+   "monday": "2021-02-15",
+   "seed": 2
+  },
+  "depends_on": [
+   {
+    "task_step_id": "deploy"
+   }
+  ]
+ },
+ {
+  "id": "seat-a",
+  "type": "add_player_slot",
+  "env_id": "trucksim",
+  "player_id": "A",
+  "player_kind": "agent",
+  "player_name": "operator-a",
+  "depends_on": [
+   {
+    "task_step_id": "lobby"
+   },
+   {
+    "task_step_id": "operator-a"
+   }
+  ]
+ },
+ {
+  "id": "seat-b",
+  "type": "add_player_slot",
+  "env_id": "trucksim",
+  "player_id": "B",
+  "player_kind": "agent",
+  "player_name": "operator-b",
+  "depends_on": [
+   {
+    "task_step_id": "lobby"
+   },
+   {
+    "task_step_id": "operator-b"
+   }
+  ]
+ },
+ {
+  "id": "seat-c",
+  "type": "add_player_slot",
+  "env_id": "trucksim",
+  "player_id": "C",
+  "player_kind": "agent",
+  "player_name": "operator-c",
+  "depends_on": [
+   {
+    "task_step_id": "lobby"
+   },
+   {
+    "task_step_id": "operator-c"
+   }
+  ]
+ },
+ {
+  "id": "close",
+  "type": "close_lobby",
+  "env_id": "trucksim",
+  "depends_on": [
+   {
+    "task_step_id": "seat-a"
+   },
+   {
+    "task_step_id": "seat-b"
+   },
+   {
+    "task_step_id": "seat-c"
+   }
+  ]
+ },
+ {
+  "id": "play-a",
+  "type": "prompt_agent",
+  "agent_name": "operator-a",
+  "prompt_id": "showmatch-A",
+  "prompt": "You run seat A: a small carrier based in Dallas, with ten units (four company tractors with dry vans, one with a reefer, two box trucks, a cargo van and two owner-operators' tractors leased on to you) and twelve drivers, for the week of February 15, 2021. Two rival carriers, based in the other hubs, work the same load board. Make your carrier as profitable as you can by the end of the week.",
+  "model": "anthropic/claude-opus-5-5",
+  "max_turns": 24,
+  "timeout_seconds": 14400,
+  "depends_on": [
+   {
+    "task_step_id": "close"
+   }
+  ]
+ },
+ {
+  "id": "play-b",
+  "type": "prompt_agent",
+  "agent_name": "operator-b",
+  "prompt_id": "showmatch-B",
+  "prompt": "You run seat B: a small carrier based in Houston, with ten units (four company tractors with dry vans, one with a reefer, two box trucks, a cargo van and two owner-operators' tractors leased on to you) and twelve drivers, for the week of February 15, 2021. Two rival carriers, based in the other hubs, work the same load board. Make your carrier as profitable as you can by the end of the week.",
+  "model": "openai/gpt-6.1-sol",
+  "max_turns": 24,
+  "timeout_seconds": 14400,
+  "depends_on": [
+   {
+    "task_step_id": "close"
+   }
+  ]
+ },
+ {
+  "id": "play-c",
+  "type": "prompt_agent",
+  "agent_name": "operator-c",
+  "prompt_id": "showmatch-C",
+  "prompt": "You run seat C: a small carrier based in San Antonio, with ten units (four company tractors with dry vans, one with a reefer, two box trucks, a cargo van and two owner-operators' tractors leased on to you) and twelve drivers, for the week of February 15, 2021. Two rival carriers, based in the other hubs, work the same load board. Make your carrier as profitable as you can by the end of the week.",
+  "model": "anthropic/claude-sonnet-5-5",
+  "max_turns": 24,
+  "timeout_seconds": 14400,
+  "depends_on": [
+   {
+    "task_step_id": "close"
+   }
+  ]
+ },
+ {
+  "id": "finish",
+  "type": "finish_match",
+  "env_id": "trucksim",
+  "depends_on": [
+   {
+    "task_step_id": "play-a"
+   },
+   {
+    "task_step_id": "play-b"
+   },
+   {
+    "task_step_id": "play-c"
+   }
+  ]
+ },
+ {
+  "id": "files",
+  "type": "save_match_files",
+  "env_id": "trucksim",
+  "fail_task_on_error": false,
+  "depends_on": [
+   {
+    "task_step_id": "finish"
+   }
+  ]
+ },
+ {
+  "id": "grade",
+  "type": "grade_match",
+  "env_id": "trucksim",
+  "weights": {
+   "profit": 1
+  },
+  "max_missed": 0.1,
+  "depends_on": [
+   {
+    "task_step_id": "finish"
+   }
+  ]
+ }
+]

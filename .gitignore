@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+
+# agent-env: this machine's config (model endpoint, store choices) and local run output
+.agentenv/config.toml
+out/
+results/runs/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+data/raw/
+results/replays/
+results/site/
+results/logs/
+results/videos/

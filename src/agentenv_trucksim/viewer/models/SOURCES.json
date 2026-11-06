@@ -1,0 +1,24 @@
+{
+ "note": "Built by scripts/build_models.py; the box truck, van, wheels and palette are Kenney's, the semi is assembled from boxes on Kenney's palette. Kenney's licence is CC0; crediting is optional.",
+ "input": {
+  "file": "kenney_car-kit_3.1.zip",
+  "sha256": "fac7dacac5c7874348cf19729af3ef205f3d366493edaf0a827d93f4fdf3d0c4",
+  "url": "https://opengameart.org/sites/default/files/kenney_car-kit_3.1.zip",
+  "licence": "CC0 1.0 (Kenney, www.kenney.nl)",
+  "licence_text": "Car Kit (3.1)\r\n\r\n\tCreated/distributed by Kenney (www.kenney.nl)\r\n\tCreation date: 02-04-2026 14:03\r\n\t\r\n\t\t\t------------------------------\r\n\r\n\tLicense: (Creative Commons Zero, CC0)\r\n\thttp://creativecommons.org/publicdomain/zero/1.0/\r\n\r\n\tYou can use this content for personal, educational, and commercial purposes.\r\n\r\n\tSupport by crediting 'Kenney' or 'www.kenney.nl' (this is not a requirement)\r\n\r\n\t\t\t------------------------------\r\n\r\n\t\u2022 Website : www.kenney.nl\r\n\t\u2022 Donate  : www.kenney.nl/donate\r\n\r\n\t\u2022 Patreon : patreon.com/kenney\r\n\t\r\n\tFollow on social media for updates:\r\n\r\n\t\u2022 Twitter:\t twitter.com/KenneyNL\r\n\t\u2022 BlueSky:\t kenney.bsky.social\r\n\t\u2022 Instagram: instagram.com/kenney_nl"
+ },
+ "files": {
+  "box-A.glb": "7cd191824e0e11bd1f747de3a6a77cd50fd980984973424a577dc18291c3d7b5",
+  "van-A.glb": "e8660f2bd56d898b843ff4bc75e8fb6b571aea737830489b802d701e121be311",
+  "semi-A.glb": "1fe776e90ddba187e6bdba6e6c01952f333708c41decdfd559411147ef52ed8c",
+  "reefer-A.glb": "fc5d82dde366fd8b8f7d63f368e3b9198d082434a187934748dc6afc824c88b9",
+  "box-B.glb": "22bfa8b27aa6cc1dc9e37f0b6178d7aec8912017aa6041e0b463da0667e718da",
+  "van-B.glb": "2779584902f50cf0a4fbff52d2692a545d7d5418695bfb5c483e29c274584245",
+  "semi-B.glb": "3db386dc29c2cbfdc9d89778b05e42fda11d7cffdbbe83a5623e1e81bddd4806",
+  "reefer-B.glb": "7249a5e225c4af35e5172479d113072e234c7825e8470967cc21f4365b7964c5",
+  "box-C.glb": "480d106890e0c6f6e2ff04de3efb9b9821c1c71433ebcea60abcdc5c266dcbae",
+  "van-C.glb": "19a6542a44b54d422c7cf8cf55c45bd71349a8378db2a58ab80cd976ca4e2a14",
+  "semi-C.glb": "daefbfdeee3155237480d46cd00774b11f2d40c0fd851b27f99fc4df6f7e3572",
+  "reefer-C.glb": "c10b9933caa4ba38748be15cbc8ecc49b32635ae0025a89cd39f332019d51ae7"
+ }
+}

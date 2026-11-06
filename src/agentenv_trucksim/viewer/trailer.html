@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TruckSimEnv Trailer</title>
+<!-- A one-minute trailer cut from the pilot's real runs (site.json's pilot-v11 runs): each chapter is one moment of one
+     run, drawn where it happened. The ground is USGS aerial imagery, the cities OpenStreetMap's buildings (OpenFreeMap's
+     tiles), the trucks Kenney's models at the run's own positions, and every number on screen is read from the runs.
+     ?record=1 is the renderer's mode (scripts/render_cinema.py trailer): window.cinema.seek(t) draws the frame at t
+     seconds and resolves once the map's tiles are in. Otherwise it plays; click pauses, the arrow keys step 2 s. -->
+<link rel="stylesheet" href="vendor/maplibre-gl-6.14.0/maplibre-gl.css">
+<style>
+:root {
+  --ink: #e8e7fc; --violet: #9e8cfc; --amber: #f5a524; --red: #ff5a4e;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Inter, Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #fff; font-family: var(--sans); }
+#map { position: fixed; inset: 0; }
+.maplibregl-ctrl-bottom-right { display: none; }
+.layer { position: fixed; inset: 0; pointer-events: none; }
+#grade { z-index: 1; }
+.band { position: fixed; left: 0; right: 0; pointer-events: none; z-index: 1; }
+#dof-top { top: 0; height: 36%; backdrop-filter: blur(3.2px); -webkit-backdrop-filter: blur(3.2px);
+  mask-image: linear-gradient(180deg, #000 15%, transparent); -webkit-mask-image: linear-gradient(180deg, #000 15%, transparent); }
+#dof-bot { bottom: 0; height: 20%; backdrop-filter: blur(2.2px); -webkit-backdrop-filter: blur(2.2px);
+  mask-image: linear-gradient(0deg, #000 5%, transparent); -webkit-mask-image: linear-gradient(0deg, #000 5%, transparent); }
+#shade { z-index: 2; }
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+#flash { z-index: 2; background: #dfe8ff; opacity: 0; mix-blend-mode: screen; }
+#labels { z-index: 2; overflow: hidden; }
+.pill { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; font: 700 15px var(--mono); letter-spacing: .12em;
+  color: #fff; background: var(--red); border-radius: 6px; padding: 5px 10px; box-shadow: 0 3px 16px rgba(0,0,0,.45); }
+#black { z-index: 9; background: #000; }
+#clock { position: fixed; left: 12px; bottom: 10px; z-index: 10; font: 12px var(--mono); color: rgba(255,255,255,.55); }
+#credit { position: fixed; right: 14px; bottom: 10px; z-index: 8; font: 11px var(--sans); color: rgba(255,255,255,.42); text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+
+#stage { position: fixed; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; pointer-events: none; z-index: 3; }
+#stage * { box-sizing: border-box; }
+.blk { position: absolute; left: 96px; width: 1240px; }
+.blk.low { bottom: 136px; } .blk.top { top: 92px; }
+.eyebrow { font: 500 15px var(--mono); letter-spacing: .3em; text-transform: uppercase; color: rgba(255,255,255,.86); text-shadow: 0 1px 12px rgba(0,0,0,.55); }
+.head { margin: 16px 0 0; font-weight: 700; font-size: 86px; line-height: 1.02; letter-spacing: -.038em; text-shadow: 0 2px 34px rgba(0,0,0,.42); white-space: pre-line; }
+.sub { margin: 18px 0 0; font-size: 26px; line-height: 1.42; color: rgba(255,255,255,.92); max-width: 1020px; text-shadow: 0 1px 16px rgba(0,0,0,.6); }
+.title { margin: 14px 0 0; font-weight: 700; font-size: 150px; line-height: 1; letter-spacing: -.045em; text-shadow: 0 3px 40px rgba(0,0,0,.42); }
+.title i { font-style: normal; color: var(--violet); }
+.link { margin-top: 26px; display: flex; gap: 12px; align-items: center; font: 500 18px var(--mono); letter-spacing: .06em; color: rgba(255,255,255,.8); }
+.link svg { width: 22px; height: 22px; }
+.stats { position: absolute; left: 96px; bottom: 118px; display: flex; gap: 104px; align-items: flex-end; }
+.stat b { display: block; font-weight: 300; font-size: 116px; line-height: 1; letter-spacing: -.035em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 30px rgba(0,0,0,.45); white-space: nowrap; }
+.stat b small { font-size: 64px; letter-spacing: -.02em; color: rgba(255,255,255,.6); margin: 0 14px; }
+.stat span { display: block; margin-top: 14px; font: 500 14px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: rgba(255,255,255,.8); }
+.stat.ref b { color: var(--amber); } .stat.low b { color: rgba(255,255,255,.58); }
+.foot { position: absolute; left: 96px; bottom: 60px; font-size: 16px; line-height: 1.4; color: rgba(255,255,255,.66); max-width: 1380px; }
+.ticker { position: absolute; right: 96px; bottom: 62px; font: 500 13px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.6); text-align: right; white-space: nowrap; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
+.credits { position: absolute; right: 96px; bottom: 140px; display: grid; grid-template-columns: auto auto; gap: 16px 16px; align-items: center; }
+.credits .k { font: 500 12px var(--mono); letter-spacing: .26em; color: rgba(255,255,255,.66); text-align: right; }
+.credits .v { display: flex; gap: 10px; align-items: center; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.credits svg { width: 22px; height: 22px; }
+
+#desk { position: absolute; right: 80px; top: 72px; width: 660px; padding: 26px 28px 18px; border-radius: 16px;
+  background: rgba(13, 15, 22, .76); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+#desk .who { font: 500 13px var(--mono); letter-spacing: .2em; color: rgba(255,255,255,.64); text-transform: uppercase; }
+#desk .clk { display: flex; gap: 18px; align-items: baseline; margin-top: 12px; }
+#desk .clk b { font-weight: 300; font-size: 68px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+#desk .clk span { font-size: 17px; color: rgba(255,255,255,.84); }
+#desk .wait { margin-top: 10px; font: 600 12px var(--mono); letter-spacing: .2em; color: var(--amber); }
+#desk .turn { margin: 18px 0 10px; font-size: 19px; font-weight: 600; }
+#desk .row { display: grid; grid-template-columns: 250px 1fr; gap: 14px; height: 34px; align-items: center; border-top: 1px solid rgba(255,255,255,.07); font-size: 14px; }
+#desk .row .fn { font: 500 13.5px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#desk .row.act .fn { color: var(--amber); }
+#desk .row.more .fn { color: rgba(255,255,255,.45); }
+#desk .row .res { color: rgba(255,255,255,.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#desk .note { margin-top: 12px; font-size: 15px; line-height: 1.45; font-style: italic; color: #f3e7d4; }
+#err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 20; background: #07090c; color: var(--red); font: 15px var(--mono); padding: 40px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="layer" id="grade"></div>
+<div class="band" id="dof-top"></div><div class="band" id="dof-bot"></div>
+<div class="layer" id="shade"></div>
+<canvas id="fx" width="1920" height="1080"></canvas>
+<div class="layer" id="flash"></div>
+<div class="layer" id="labels"></div>
+<div id="stage"></div>
+<div class="layer" id="black"></div>
+<div id="clock" hidden></div>
+<div id="credit">Imagery: USGS The National Map · Buildings and roads: © OpenStreetMap contributors, OpenFreeMap · Trucks: Kenney</div>
+<div id="err"></div>
+<script src="vendor/deck.gl-9.4.0.min.js"></script>
+<script type="importmap">{ "imports": { "@deck.gl/core": "./vendor/deck.gl-core-shim.mjs" } }</script>
+<script type="module">
+import * as maplibregl from "./vendor/maplibre-gl-6.14.0/maplibre-gl.mjs";
+import { MapLibreOverlay } from "./vendor/deck.gl-maplibre-9.4.0/index.js";
+import { D2R, clamp, lerp, smooth, esc, money, plural, metersBetween, bearingOf, step, getJSON, SEAT_RGB, runModel } from "./runmodel.mjs";
+
+const D = window.deck;
+const Q = new URLSearchParams(location.search);
+const RECORD = Q.has("record");
+const fail = e => { const el = document.getElementById("err"); el.style.display = "flex"; el.textContent = "The trailer could not start:\n" + (e && e.stack || e); window.cinema = { error: String(e && e.stack || e) }; };
+window.addEventListener("error", ev => fail(ev.error || ev.message));
+window.addEventListener("unhandledrejection", ev => fail(ev.reason));
+const $ = id => document.getElementById(id);
+
+// ---- the runs it is cut from ---------------------------------------------------------------------------------------
+const SITE = await getJSON("site.json");
+const SHAPES = await getJSON("road_shapes.json");
+const OPUS = "anthropic/claude-opus-5-5", HAIKU = "anthropic/claude-haiku-5-5";
+function runOn(monday, model) {
+  const r = (SITE.runs || []).find(r => r.monday === monday && r.model === model);
+  if (!r) throw new Error(`site.json has no run of the week of ${monday} by ${model}: the trailer is cut from the pilot-v11 site`);
+  return r;
+}
+const best = (SITE.runs || []).filter(r => r.model === OPUS && r.reward != null).sort((x, y) => y.reward - x.reward || (x.task < y.task ? -1 : 1))[0];
+if (!best) throw new Error(`site.json has no scored run by ${OPUS}`);
+// O: Hurricane Delta's week (the title, the board, Delta, the close); U: Winter Storm Uri's; J: Opus's best week by score
+// (its desk, a breakdown, its books).
+const PICK = { O: runOn("2020-10-05", OPUS), J: best, U: runOn("2021-02-15", OPUS) };
+const RAW = {}, RUN = {};
+for (const [k, s] of Object.entries(PICK)) {
+  RAW[k] = await getJSON(`runs/${encodeURIComponent(s.id)}.json`);
+  RUN[k] = runModel(RAW[k], SHAPES, { id: s.id, model: s.model, lane: S => 0.9 * S });
+}
+const O = RUN.O, J = RUN.J, U = RUN.U;
+
+// ---- small helpers -------------------------------------------------------------------------------------------------
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const dayOf = (M, tick) => { const d = new Date(M.MONDAY.getTime() + Math.floor(tick / 96) * 86400000); return { wd: WD[Math.floor(tick / 96) % 7], d: d.getUTCDate(), m: MON[d.getUTCMonth()], y: d.getUTCFullYear() }; };
+const dateLine = (M, tick) => { const x = dayOf(M, tick); return `${x.wd} ${x.d} ${x.m} ${x.y}`; };
+const weekLine = M => { const a = dayOf(M, 0), b = dayOf(M, 6 * 96); return a.m === b.m ? `${a.d}–${b.d} ${a.m} ${a.y}` : `${a.d} ${a.m}–${b.d} ${b.m} ${b.y}`; };
+const hhmm = tick => { const m = Math.floor((((tick % 96) + 96) % 96) * 15); return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+const road = r => r.replace(/^I (\d+)/, "I-$1").replace(/^US (\d+)/, "US-$1").replace(/^TX (\d+)/, "TX-$1");
+const prettyModel = m => m.replace(/^anthropic\//, "").replace(/^claude-([a-z]+)-(\d+)-(\d+)$/, (_, n, a, b) => `Claude ${n[0].toUpperCase() + n.slice(1)} ${a}.${b}`);
+const shortModel = m => prettyModel(m).replace(/^Claude /, "");
+const cityName = (M, id) => M.CITY[id].name;
+const UNIT_TEXT = { semi: "tractor + 53' dry van", reefer: "tractor + 53' reefer", box: "26' box truck", van: "cargo van" };
+const FRONT = { semi: 4.3, reefer: 4.3, box: 2.4, van: 1.5 }, BACK = { semi: -4.25, reefer: -4.25, box: -2.4, van: -1.5 };   // model units
+// Where the camera looks in each city: its downtown (art direction; the sim's city points are Census centroids).
+const DOWNTOWN = { HOU: [-95.3665, 29.7590], AUS: [-97.7431, 30.2690], DAL: [-96.7990, 32.7800], SA: [-98.4900, 29.4250] };
+// A semi is 8.5 model units long: at this many meters a unit, the close shots draw it about 3 times life size.
+const S_CLOSE = 7.5;
+const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
+function pilotScore(model, kind) {   // a model's mean score over the site's weeks of one kind
+  const xs = SITE.runs.filter(r => r.model === model && r.kind === kind && r.reward != null).map(r => r.reward);
+  if (!xs.length) throw new Error(`site.json has no ${kind} weeks by ${model}`);
+  return { v: mean(xs), n: xs.length };
+}
+const roadBearing = (M, L) => M.along(L.a, L.b, L.mile).brg;   // which way the road runs under a truck that stands still
+
+function findTick(M, tid, lo, hi, test, what) {   // the first 15 s of sim time in [lo, hi] at which test(L, w) holds
+  for (let t = lo; t <= hi; t += 1 / 60) { const L = M.logical(tid, t); if (test(L, M.world(tid, t, S_CLOSE), t)) return t; }
+  throw new Error(`no moment for ${what}: ${tid} never matches between ticks ${lo} and ${hi}`);
+}
+// The first moment (15 s of sim time apart) in the windows of ticks [lo, hi] at which test(tid, L, t) holds for a truck
+// on the road, or null; trucks are tried in id order, so the same run always gives the same moment.
+function firstMoment(M, windows, test) {
+  const ids = Object.keys(M.TRUCK).sort();
+  for (const [lo, hi] of windows) for (let t = lo; t <= hi; t += 1 / 60) for (const tid of ids) {
+    const L = M.logical(tid, t);
+    if (!L.city && test(tid, L, t)) return { tid, t };
+  }
+  return null;
+}
+const daily = (h0, h1) => [0, 1, 2, 3, 4, 5, 6].map(d => [d * 96 + h0 * 4, d * 96 + h1 * 4]);
+const moving = (M, tid, t) => speedAt(M, tid, t) > 1500;                    // m a tick: more than about 4 mph
+const need = (x, what) => { if (!x) throw new Error(`no moment for ${what} in this run`); return x; };
+function heading(M, tid, tick, S) {   // the way a truck drives, smoothed over a few hundred meters of road
+  let ex = 0, ny = 0;
+  for (let k = -4; k <= 4; k++) {
+    const a = M.world(tid, tick + k * 0.01 - 0.006, S).p, b = M.world(tid, tick + k * 0.01 + 0.006, S).p;
+    ex += (b[0] - a[0]) * Math.cos(a[1] * D2R); ny += b[1] - a[1];
+  }
+  return Math.hypot(ex, ny) < 1e-9 ? null : (Math.atan2(ex, ny) / D2R + 360) % 360;
+}
+const speedAt = (M, tid, tick) => metersBetween(M.world(tid, tick - 0.02, S_CLOSE).p, M.world(tid, tick + 0.02, S_CLOSE).p) / 0.04;   // m a tick
+// A chase camera: it looks `lead` meters ahead of the truck, from behind it turned `yaw` degrees.
+function chase(M, tid, tick, { yaw, lead, zoom, pitch }) {
+  const w = M.world(tid, tick, S_CLOSE), h = heading(M, tid, tick, S_CLOSE) ?? w.brg;
+  return { center: step(w.p, h, lead), zoom, pitch, bearing: h + yaw };
+}
+const view = (center, zoom, pitch, bearing) => ({ center, zoom, pitch, bearing });
+// A stretch of road under one of the week's weather events at tick, if the truck's mile is inside it.
+function weatherOn(M, L, tick, re) {
+  if (L.city) return null;
+  const miles = M.edgeOf(L.a, L.b).miles;
+  return M.weatherAt(tick).find(d => re.test(d.iv.type) && d.fade > 0.9 &&
+    ((d.w.a === L.a && d.w.b === L.b && L.mile >= d.w.m0 && L.mile <= d.w.m1) || (d.w.a === L.b && d.w.b === L.a && miles - L.mile >= d.w.m0 && miles - L.mile <= d.w.m1))) || null;
+}
+const MARK = `<svg viewBox="0 0 32 32"><rect x="2" y="2" width="12" height="12" rx="3" fill="#e8e7fc"/><rect x="18" y="2" width="12" height="12" rx="3" fill="#9e8cfc"/><rect x="2" y="18" width="12" height="12" rx="3" fill="#e8e7fc"/></svg>`;
+const CREDITS = `<div class="credits a" data-d="0.35"><span class="k">BUILT USING</span><span class="v">${MARK}AgentEnv Framework</span><span class="k">BY</span><span class="v">Scale AI</span></div>`;
+const TITLE = `<div class="eyebrow a">An RL environment · real Texas freight data</div><div class="title a" data-d="0.1">TruckSim<i>Env</i></div><div class="sub a" data-d="0.2">A Texas trucking company's dispatch desk, for AI agents.</div>`;
+
+// ---- the chapters --------------------------------------------------------------------------------------------------
+// Each: a run, a look, the run's clock (tick at u seconds into the chapter), a camera, and its type. A tick is the sim's
+// 15 minutes from Monday 00:00 of the run's week. `cont` chapters carry on the shot before them, with no dip to black.
+const CH = [];
+
+{ // 1. the title: a loaded truck pulls into a downtown at golden hour (Dallas first)
+  let m = null, city = null;
+  for (const c of ["DAL", "HOU", "AUS", "SA"]) {
+    m = firstMoment(O, daily(17, 20), (tid, L, t) => L.state === "loaded" && moving(O, tid, t) && !weatherOn(O, L, t, /./) && metersBetween(O.world(tid, t, S_CLOSE).p, DOWNTOWN[c]) < 2600);
+    if (m) { city = c; break; }
+  }
+  const { tid, t: t0 } = need(m, "the title"), rate = 30 / speedAt(O, tid, t0), dur = 7;
+  CH.push({ id: "title", dur, run: O, look: "golden", tick: u => t0 + rate * u,
+    cam: (u, tk) => {   // over the truck's shoulder, toward the skyline
+      const e = smooth(u / dur), p = O.world(tid, tk, S_CLOSE).p, b = bearingOf(p, DOWNTOWN[city]);
+      return view(step(p, b, lerp(420, 620, e)), lerp(15.75, 15.4, e), lerp(72, 76, e), b + lerp(-14, 2, e));
+    },
+    type: () => ({ html: `<div class="blk low">${TITLE}</div>${CREDITS}` }) });
+}
+{ // 2. the board: three companies through a day
+  const R = RAW.O, nC = Object.keys(O.CITY).length, nR = O.ROADS.length, posted = R.events.filter(e => e.kind === "offer_posted").length;
+  const per = O.SEATS.map(s => R.trucks.filter(t => t.seat === s).length), drv = O.SEATS.map(s => (R.drivers || []).filter(d => d.seat === s && d.kind !== "temp").length);
+  if (!per.every(x => x === per[0]) || !drv.every(x => x === drv[0])) throw new Error("the board chapter says every company has the same fleet, and this run's don't");
+  const hubs = O.SEATS.map(s => cityName(O, R.seats[s].hub)), t0 = 96 + 16 * 4, dur = 6.5, rate = 96 / dur;   // Tue 16:00 to Wed 16:00, the busy middle of the week
+  CH.push({ id: "board", dur, run: O, look: "board", board: true, dof: false, tick: u => t0 + rate * u,
+    cam: u => { const e = smooth(u / dur); return view([lerp(-96.4, -96.25, e), lerp(30.05, 30.3, e)], lerp(6.45, 6.75, e), lerp(38, 47, e), lerp(-15, -6, e)); },
+    type: tk => ({ html: `<div class="blk low"><div class="eyebrow a">The Texas Triangle · ${nC} cities · ${nR} roads</div><div class="head a" data-d="0.1">Three companies.\nOne load board.</div>
+      <div class="sub a" data-d="0.2">Each runs ${per[0]} trucks and ${drv[0]} drivers out of ${hubs.slice(0, -1).join(", ")} or ${hubs[hubs.length - 1]}, bidding for the same ${posted} loads, in a real week.</div></div>`,
+      ticker: `Week of ${weekLine(O)} · ${dateLine(O, tk)} · ${hhmm(tk)}` }) });
+}
+{ // 3. real freight: a loaded truck heads into a city by day, on a dry road (Austin first)
+  let m = null;
+  for (const c of ["AUS", "DAL", "SA", "HOU"]) {
+    m = firstMoment(J, daily(9, 16), (tid, L, t) => L.state === "loaded" && moving(J, tid, t) && !weatherOn(J, L, t, /./) && metersBetween(J.world(tid, t, S_CLOSE).p, DOWNTOWN[c]) < 12500);
+    if (m) break;
+  }
+  const { tid, t: t0 } = need(m, "the freight shot"), L0 = J.logical(tid, t0), rate = 30 / speedAt(J, tid, t0), dur = 6, unit = UNIT_TEXT[J.modelOf(J.TRUCK[tid])];
+  CH.push({ id: "freight", dur, run: J, look: "winter", tick: u => t0 + rate * u,
+    cam: (u, tk) => { const e = smooth(u / dur); return chase(J, tid, tk, { yaw: lerp(42, 18, e), lead: lerp(40, 160, e), zoom: lerp(16.7, 16.35, e), pitch: lerp(64, 70, e) }); },
+    type: tk => ({ html: `<div class="blk low"><div class="eyebrow a">FAF5 freight · OpenStreetMap roads · EIA diesel</div><div class="head a" data-d="0.1">Real freight. Real roads.</div>
+      <div class="sub a" data-d="0.2">Loads follow the federal Freight Analysis Framework's flows. Routes come from OpenStreetMap, diesel at the price EIA posted that week.</div></div>`,
+      ticker: `${tid} · ${unit} · ${J.logical(tid, tk).state} · ${road(J.edgeOf(L0.a, L0.b).route)} → ${cityName(J, L0.b)} · ${dateLine(J, tk)} · ${hhmm(tk)}` }) });
+}
+{ // 4. Hurricane Delta: a truck under one of NOAA's tropical-storm reports for its county
+  const re = /Tropical|Hurricane/, { tid, t: t0 } = need(firstMoment(O, [[3 * 96, 6 * 96]], (tid, L, t) => moving(O, tid, t) && weatherOn(O, L, t, re)), "the Delta shot");
+  const L0 = O.logical(tid, t0), wx = weatherOn(O, L0, t0, re), nWx = RAW.O.events.filter(e => e.kind === "weather_start").length;
+  const rate = 20 / speedAt(O, tid, t0), dur = 6, pct = Math.round(100 * wx.iv.f);
+  CH.push({ id: "delta", dur, run: O, look: "storm", fx: "rain", lightning: [1.35, 1.47, 4.15, 4.27, 4.4], tick: u => t0 + rate * u,
+    cam: (u, tk) => { const e = smooth(u / dur); return chase(O, tid, tk, { yaw: lerp(64, 38, e), lead: lerp(20, 120, e), zoom: lerp(16.45, 16.2, e), pitch: lerp(62, 68, e) }); },
+    type: () => ({ html: `<div class="blk low"><div class="eyebrow a">${dayOf(O, t0).d} ${dayOf(O, t0).m} ${dayOf(O, t0).y} · NOAA Storm Events</div><div class="head a" data-d="0.1">Hurricane Delta.</div>
+      <div class="sub a" data-d="0.2">NOAA logged ${nWx} storm reports on the board's roads that week, county by county. Where one touches a road, every truck on it slows: here, to ${pct}% speed.</div></div>`,
+      ticker: `${tid} · ${road(O.edgeOf(L0.a, L0.b).route)} ${cityName(O, L0.a)} → ${cityName(O, L0.b)} · ${wx.iv.type} · ${wx.iv.where} · ${pct}% speed` }) });
+}
+{ // 5. Winter Storm Uri: trucks held at a closed road, in the snow (two at one closure if any, else one)
+  const R = RAW.U, ids = Object.keys(U.TRUCK).sort(), NEAR = 1500;
+  // A truck counts as held AT a closure when it waits within NEAR m of an end of one open on its road. Not every
+  // held truck does: one can be held in a city for a closure ahead on its route, and a truck's state is sampled once a
+  // sim hour, so it can still read "held" in the hour after its closure reopened.
+  const edgeKey = (a, b) => [a, b].sort().join("-");
+  function heldAt(tid, t) {
+    const L = U.logical(tid, t);
+    if (L.state !== "held" || L.city) return null;
+    const p = U.world(tid, t, S_CLOSE).p;
+    for (const c of U.closuresAt(t)) {
+      if (edgeKey(c.a, c.b) !== edgeKey(L.a, L.b)) continue;
+      const end = [0, 1].find(i => metersBetween(p, c.ends[i].p) < NEAR);
+      if (end != null) return { c, end };
+    }
+    return null;
+  }
+  let pick = null;
+  for (const want of [2, 1]) {
+    for (let t = 0; t < U.WEEK && !pick; t += 0.25) {
+      const by = {};
+      for (const tid of ids) { const h = heldAt(tid, t); if (h) (by[h.c.closure_id] ||= []).push({ tid, ...h }); }
+      const g = Object.values(by).find(g => g.length >= want);
+      if (g) pick = { t, held: g.map(x => x.tid), cl: g[0].c, end: g[0].end };
+    }
+    if (pick) break;
+  }
+  const { t: t0, held, cl, end } = need(pick, "the Uri shot"), L0 = U.logical(held[0], t0);
+  const ev = R.events.filter(e => e.kind === "held" && e.truck === held[0] && e.t <= t0).pop();
+  if (!ev || ev.closure !== cl.closure_id) throw new Error(`the Uri shot's ${held[0]} waits at ${cl.closure_id}, but its last held event names ${ev && ev.closure}`);
+  const heldHere = tk => ids.filter(t => { const h = heldAt(t, tk); return h && h.c.closure_id === cl.closure_id; }).length;
+  const at = U.world(held[0], t0, S_CLOSE).p, h = roadBearing(U, L0);
+  const nWx = R.events.filter(e => e.kind === "weather_start").length, nCl = U.CLOSURES.length, dur = 6.5, name = road(cl.road.split(" ").slice(0, 2).join(" "));
+  CH.push({ id: "uri", dur, run: U, look: "snow", fx: "snow", closures: true, pill: { text: `${name} closed`, closure: cl.closure_id, mile: end === 0 ? cl.m0 + 0.12 : cl.m1 - 0.12 }, tick: u => t0 + u * 0.01,
+    cam: u => { const e = smooth(u / dur); return view(step(at, h, 60), lerp(17.35, 17.1, e), lerp(60, 66, e), h + 150 + 7 * u); },
+    type: tk => { const n = heldHere(tk);
+      return { html: `<div class="blk low"><div class="eyebrow a">${weekLine(U)} · NOAA Storm Events</div><div class="head a" data-d="0.1">Winter Storm Uri.</div>
+      <div class="sub a" data-d="0.2">NOAA logged ${nWx} storm reports on the board's roads that week. Where they iced over, the sim closed ${nCl} roads: trucks wait, detour or turn back.</div></div>`,
+      ticker: `${name} closed · ${cl.where} · ${n} truck${n === 1 ? "" : "s"} held · ${dateLine(U, tk)}` }; } });
+}
+{ // 6. the agent's desk: the first turn of Opus's best week in which it dispatches a truck
+  const k = Object.keys(J.TURN).map(Number).sort((a, b) => a - b).find(k => (J.FEED[k] || []).some(l => !l.say && l.fn.startsWith("dispatch(")));
+  if (k == null) throw new Error("the desk chapter needs a turn in which the agent dispatches");
+  const calls = J.FEED[k].filter(l => !l.say), hub = cityName(J, J.HUB), dur = 7, t0 = k * J.TT, ROWS = 12;
+  // at most ROWS rows: every action (claims, the dispatch, end_turn) stays; reads past the first few fold into one line
+  const acts = calls.filter(l => l.act).slice(-(ROWS - 2)), reads = calls.filter(l => !l.act);
+  const rows = calls.length <= ROWS ? calls
+    : [...reads.slice(0, ROWS - 1 - acts.length), { fn: `… ${plural(reads.length - (ROWS - 1 - acts.length), "more call")}`, res: "", more: true }, ...acts];
+  CH.push({ id: "desk", dur, run: J, look: "night", tick: u => t0 + u * 0.004,
+    cam: u => view(DOWNTOWN[J.HUB], lerp(14.35, 14.6, smooth(u / dur)), 70, 205 + 3.2 * u),
+    type: (tk, u) => {
+      const shown = Math.ceil(rows.length * smooth((u - 0.9) / (dur * 0.62)));
+      return { html: `<div class="blk low" style="width:900px"><div class="eyebrow a">The agent's desk</div><div class="head a" data-d="0.1">Read. Plan. Dispatch.</div>
+        <div class="sub a" data-d="0.2" style="max-width:860px">16 MCP tools: the load board, a trip planner, drivers and their hours, breakdowns. Every six hours of the week, the sim waits while the agent works.</div></div>
+        <div id="desk" class="a" data-d="0.3"><div class="who">${esc(prettyModel(J.MODEL))} · company ${J.SEAT} · ${esc(hub)}</div>
+        <div class="clk"><b>${hhmm(t0)}</b><span>${dateLine(J, t0)} · ${k === 0 ? "the week begins" : "its first dispatch"}</span></div><div class="wait">● THE CLOCK WAITS WHILE THE AGENT WORKS</div>
+        <div class="turn">Turn ${k + 1} of ${J.NT} · ${calls.length} tool calls</div>
+        ${rows.slice(0, Math.max(0, shown)).map(l => `<div class="row${l.act ? " act" : ""}${l.more ? " more" : ""}"><span class="fn">${esc(l.fn)}</span><span class="res">${esc(l.res)}</span></div>`).join("")}</div>` };
+    } });
+}
+{ // 7. things break: a breakdown on the road (the agent's company first), lit by the hour it happened
+  let M = null, R = null, e = null;
+  for (const k of ["J", "O", "U"]) {
+    const R0 = RAW[k], M0 = RUN[k];
+    e = R0.events.find(x => x.kind === "breakdown" && x.seat === M0.SEAT && x.where) || null;
+    if (e) { M = M0; R = R0; break; }
+  }
+  if (!e) for (const k of ["J", "O", "U"]) { e = RAW[k].events.find(x => x.kind === "breakdown" && x.where) || null; if (e) { M = RUN[k]; R = RAW[k]; break; } }
+  need(e, "the breakdown chapter");
+  const fix = R.events.find(x => x.kind === "repair_ordered" && x.truck === e.truck && Math.abs(x.t - e.t) <= 2);
+  if (!fix) throw new Error(`no repair ordered for ${e.truck}'s breakdown`);
+  const tid = e.truck, t0 = findTick(M, tid, e.t, e.t + 8, L => L.state === "broken" && !L.city, "the breakdown"), at = M.world(tid, t0, S_CLOSE).p;
+  const h = roadBearing(M, M.logical(tid, t0)), t = M.TRUCK[tid], dur = 6, hour = (e.t % 96) / 4, night = hour < 6.5 || hour >= 18.5;
+  const [where, from] = [e.where.split(",")[0], e.where.split(", ").slice(1).join(", ")];
+  CH.push({ id: "breakdown", dur, run: M, look: night ? "moon" : "winter", tick: u => t0 + u * 0.004,
+    cam: u => view(at, lerp(16.8, 17.05, smooth(u / dur)), lerp(58, 64, smooth(u / dur)), h + 115 + 6 * u),
+    type: () => ({ html: `<div class="blk low"><div class="eyebrow a">${dateLine(M, e.t)} · ${hhmm(e.t)} · ${esc(road(where))}</div><div class="head a" data-d="0.1">Things break.</div>
+      <div class="sub a" data-d="0.2">${tid}'s ${esc(e.component)} fail${from ? " " + esc(from) : ""}. Roadside repair: ${money(fix.usd)}, paid by ${esc(fix.paid_by)}. And every driver keeps the federal hours: 11 at the wheel, 14 on duty, then 10 off.</div></div>`,
+      ticker: `${tid} · ${UNIT_TEXT[M.modelOf(t)]}${t.owner === "owner_operator" ? " · owner-operator" : ""} · broken down · ${esc(road(e.where))}` }) });
+}
+{ // 8. the books: Opus's best week against the two references in its seat
+  const R = RAW.J, refs = R.result.references, mine = R.seats[J.SEAT].profit_usd, dur = 6.5;
+  if (!refs) throw new Error("the books chapter needs the run's reference weeks");
+  CH.push({ id: "books", dur, run: J, look: "night", tick: u => 6 * 96 + 88 + u * 0.004,
+    cam: u => view(DOWNTOWN[J.HUB], lerp(13.5, 13.75, smooth(u / dur)), 64, 120 + 4 * u),
+    type: () => ({ html: `<div class="blk top"><div class="eyebrow a">Settled in dollars · ${weekLine(J)} · company ${J.SEAT}, ${esc(cityName(J, J.HUB))}</div><div class="head a" data-d="0.1">Every week settles in dollars.</div></div>
+      <div class="stats"><div class="stat a" data-d="0.45"><b>${money(mine, true)}</b><span>${esc(prettyModel(J.MODEL))}</span></div>
+      <div class="stat ref a" data-d="0.6"><b>${money(refs.anchor_usd, true)}</b><span>The optimizer, in its seat</span></div>
+      <div class="stat low a" data-d="0.75"><b>${money(refs.naive_usd, true)}</b><span>A greedy dispatcher, in its seat</span></div></div>
+      <div class="foot a" data-d="0.9">Profit for the week: revenue earned minus every cost paid. Same freight, same storms, same rivals; the optimizer re-plans with CP-SAT every six hours.</div>` }) });
+}
+{ // 9. the pilot: the two models over ordinary and storm weeks, said the way the scores have it
+  const sc = { [OPUS]: { ord: pilotScore(OPUS, "ordinary"), storm: pilotScore(OPUS, "storm") }, [HAIKU]: { ord: pilotScore(HAIKU, "ordinary"), storm: pilotScore(HAIKU, "storm") } };
+  const weeks = new Set(SITE.runs.map(r => r.task)).size, nm = m => shortModel(m);
+  const tally = {};   // in the storm weeks: loads each model won, and the late penalties it paid
+  for (const r of SITE.runs.filter(r => r.kind === "storm" && (r.model === OPUS || r.model === HAIKU))) {
+    const R = await getJSON(`runs/${encodeURIComponent(r.id)}.json`), s = R.result.model_seats[0], t = tally[r.model] ||= { won: 0, late: 0 };
+    t.won += R.events.filter(e => e.kind === "claim_won" && e.seat === s).length; t.late += R.seats[s].ledger_usd.late_penalty || 0;
+  }
+  const dOrd = sc[OPUS].ord.v - sc[HAIKU].ord.v, dStorm = sc[OPUS].storm.v - sc[HAIKU].storm.v;
+  const stormWins = { [OPUS]: 0, [HAIKU]: 0 };   // storm weeks each model scored higher in, the two in the same seat
+  for (const task of new Set(SITE.runs.filter(r => r.kind === "storm").map(r => r.task))) {
+    const [a, b] = [OPUS, HAIKU].map(m => SITE.runs.find(r => r.task === task && r.model === m));
+    if (a && b && a.reward != null && b.reward != null && a.reward !== b.reward) stormWins[a.reward > b.reward ? OPUS : HAIKU]++;
+  }
+  let head, sub;
+  if (dOrd !== 0 && Math.abs(dStorm) < Math.abs(dOrd) && stormWins[OPUS] > 0 && stormWins[HAIKU] > 0) {
+    // the storm weeks split between the models: the ordinary-week leader's edge shrinks, and neither model sweeps them
+    const ordW = dOrd > 0 ? OPUS : HAIKU, other = ordW === OPUS ? HAIKU : OPUS, wk = n => `${n} storm week${n === 1 ? "" : "s"}`;
+    head = "Storms close the gap.";
+    sub = `${nm(ordW)} leads the ordinary weeks by ${Math.abs(dOrd).toFixed(2)}. When the weather turns, the two finish within ${Math.abs(dStorm).toFixed(2)}: ${nm(ordW)} wins ${wk(stormWins[ordW])}, ${nm(other)} ${wk(stormWins[other])}.`;
+  } else if (dOrd * dStorm < 0) {
+    const ordW = dOrd > 0 ? OPUS : HAIKU, stW = ordW === OPUS ? HAIKU : OPUS;
+    head = "Storms flip the ranking.";
+    sub = tally[ordW].won > tally[stW].won && tally[ordW].late > tally[stW].late
+      ? `In storm weeks ${nm(ordW)} takes on more loads (${tally[ordW].won} to ${nm(stW)}'s ${tally[stW].won}) and pays for the late ones: ${money(tally[ordW].late)} in late penalties to ${money(tally[stW].late)}.`
+      : `${nm(ordW)} leads the ordinary weeks; when the weather turns, ${nm(stW)} does.`;
+  } else if (dOrd !== 0 && dStorm !== 0) {
+    const w = dOrd > 0 ? OPUS : HAIKU;
+    head = `${nm(w)} leads, rain or shine.`;
+    sub = `It scores higher than ${nm(w === OPUS ? HAIKU : OPUS)} in the ordinary weeks and in the storm weeks.`;
+  } else { head = "Two models, real weeks."; sub = "Each scored on the same freight and the same storms, in the same seat."; }
+  const f = x => x.v.toFixed(2), t0 = 96 + 13 * 4, dur = 6.5;
+  CH.push({ id: "pilot", dur, run: U, look: "snow", fx: "snow", tick: u => t0 + u * 0.004,
+    cam: u => view(DOWNTOWN.DAL, lerp(14.2, 14.45, smooth(u / dur)), 70, 330 + 4 * u),
+    type: () => ({ html: `<div class="blk top"><div class="eyebrow a">The pilot · ${weeks} real weeks · ${sc[OPUS].ord.n} ordinary, ${sc[OPUS].storm.n} storm</div><div class="head a" data-d="0.1">${esc(head)}</div>
+      <div class="sub a" data-d="0.2">${esc(sub)}</div></div>
+      <div class="stats"><div class="stat a" data-d="0.45"><b>${f(sc[OPUS].ord)}<small>→</small>${f(sc[OPUS].storm)}</b><span>${nm(OPUS)} · ordinary → storm weeks</span></div>
+      <div class="stat ref a" data-d="0.6"><b>${f(sc[HAIKU].ord)}<small>→</small>${f(sc[HAIKU].storm)}</b><span>${nm(HAIKU)} · ordinary → storm weeks</span></div></div>
+      <div class="foot a" data-d="0.8">Score: 0.2 is a greedy dispatcher's week in the model's seat, 1.0 the optimizer's; above 1.0 beats it. Mean over the pilot's weeks.</div>` }) });
+}
+{ // 10-11. the close: Houston at dusk, then the title again
+  const t0 = 96 + 19 * 4, dur = 5.5, card = 4.5;
+  const cam = u => view(DOWNTOWN.HOU, lerp(14.15, 14.5, smooth(u / (dur + card))), lerp(73, 76, smooth(u / (dur + card))), 18 + 3.4 * u);
+  CH.push({ id: "end", dur, run: O, look: "dusk", tick: u => t0 + u * 0.01, cam,
+    type: () => ({ html: `<div class="blk low"><div class="head a">The weather changes.\nYour agents dispatch.</div>
+      <div class="sub a" data-d="0.15">Real Texas freight, roads and storms: a week of dispatch to learn in.</div><div class="link a" data-d="0.3">${MARK}agentenvframework.com</div></div>` }) });
+  CH.push({ id: "card", dur: card, cont: true, run: O, look: "dusk", tick: u => t0 + (dur + u) * 0.01, cam: u => cam(dur + u),
+    type: () => ({ html: `<div class="blk low">${TITLE}</div>${CREDITS}` }) });
+}
+let T0 = 0; for (const c of CH) { c.t0 = T0; T0 += c.dur; }
+const DURATION = T0;
+const chapterAt = T => { let i = 0; while (i + 1 < CH.length && CH[i + 1].t0 <= T) i++; return i; };
+
+// ---- looks ---------------------------------------------------------------------------------------------------------
+// img: the imagery's [saturation, contrast, brightness-min, brightness-max]; bld: building colour (an expression or a
+// colour); roads: city-light glow on OpenStreetMap's roads (0 by day); sky: MapLibre's sky and fog; css: a filter on the
+// map; grade: an overlay and its blend; tint: what the trucks' colours are multiplied by.
+const byHeight = stops => ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 0], ...stops];
+const LOOKS = {
+  golden: { img: [0.02, 0.12, 0, 0.94], bld: "#efe0cc", roads: 0, sky: ["#7e9cc2", "#f4c58f", "#e7c39a", 0.3], css: "saturate(1.12) contrast(1.06)",
+            grade: ["linear-gradient(180deg, rgba(255,168,88,.42) 0%, rgba(255,150,80,.14) 42%, rgba(60,30,70,.16) 100%)", "soft-light"], tint: [255, 246, 236] },
+  board:  { img: [-0.4, 0.06, 0, 0.55], bld: "#888", roads: 0, sky: ["#0d1626", "#2a3a55", "#1a2638", 0.2], css: "saturate(1.05) contrast(1.06)",
+            grade: ["radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,.45) 100%)", "normal"], tint: [255, 255, 255] },
+  winter: { img: [-0.16, 0.08, 0.02, 0.96], bld: "#eef1f4", roads: 0, sky: ["#a2bedb", "#e7edf2", "#dbe3e9", 0.3], css: "saturate(.96) contrast(1.05) brightness(1.03)",
+            grade: ["linear-gradient(180deg, rgba(170,205,255,.22), rgba(255,255,255,0) 55%)", "soft-light"], tint: [255, 255, 255] },
+  storm:  { img: [-0.5, -0.04, 0.02, 0.7], bld: "#8a929b", roads: 0.2, sky: ["#3a434b", "#66717a", "#5b656e", 0.6], css: "saturate(.85) contrast(1.08)",
+            grade: ["linear-gradient(180deg, rgba(30,52,58,.55), rgba(16,30,36,.25))", "soft-light"], tint: [190, 196, 204] },
+  snow:   { img: [-0.92, -0.16, 0.42, 1], bld: "#f5f7fa", roads: 0, sky: ["#aab4bf", "#dfe4e9", "#d7dce1", 0.55], css: "contrast(1.03) brightness(1.02)",
+            grade: ["linear-gradient(180deg, rgba(180,200,232,.34), rgba(255,255,255,0) 60%)", "soft-light"], tint: [235, 240, 248] },
+  night:  { img: [-0.3, 0.1, 0, 0.2], bld: byHeight([0, "#121827", 40, "#1d273d", 120, "#3a4868", 250, "#6878a3"]), roads: 1, sky: ["#05080f", "#1a2236", "#0c1220", 0.3],
+            css: "saturate(1.12) contrast(1.08)", grade: ["radial-gradient(ellipse at 50% 62%, rgba(255,170,80,.12), rgba(0,10,30,.38))", "normal"], tint: [105, 115, 145], lights: true },
+  moon:   { img: [-0.6, 0.08, 0.02, 0.42], bld: "#2a3346", roads: 0.6, sky: ["#08101e", "#22304e", "#152036", 0.3], css: "saturate(.92) contrast(1.08)",
+            grade: ["linear-gradient(180deg, rgba(60,96,180,.4), rgba(20,34,72,.3))", "soft-light"], tint: [150, 160, 196], lights: true },
+  dusk:   { img: [-0.04, 0.1, 0, 0.62], bld: byHeight([0, "#6f646c", 60, "#a8949a", 200, "#e0c8bc"]), roads: 0.75, sky: ["#34405f", "#f29a66", "#b97c66", 0.35],
+            css: "saturate(1.15) contrast(1.06)", grade: ["linear-gradient(180deg, rgba(255,122,62,.36), rgba(60,40,92,.22))", "soft-light"], tint: [210, 196, 196], lights: true },
+};
+
+// ---- the map -------------------------------------------------------------------------------------------------------
+const glow = (id, classes, color, width, blur, minzoom) => ({ id, type: "line", source: "omt", "source-layer": "transportation", minzoom,
+  filter: ["in", ["get", "class"], ["literal", classes]], layout: { "line-cap": "round", "line-join": "round" },
+  paint: { "line-color": color, "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], ...width], "line-blur": blur, "line-opacity": 0 } });
+const style = {
+  version: 8, transition: { duration: 0, delay: 0 }, glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+  sources: {
+    img: { type: "raster", tiles: ["https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"], tileSize: 256, maxzoom: 16,
+           attribution: "Imagery: USGS The National Map (public domain)" },
+    omt: { type: "vector", url: "https://tiles.openfreemap.org/planet", attribution: "OpenFreeMap © OpenMapTiles © OpenStreetMap contributors" },
+  },
+  layers: [
+    { id: "bg", type: "background", paint: { "background-color": "#1b1f18" } },
+    { id: "img", type: "raster", source: "img", paint: { "raster-fade-duration": 0 } },
+    glow("glow-minor", ["tertiary", "minor"], "#f3c27e", [12, 0.3, 16, 1.8], 0.8, 11),
+    glow("glow-mid", ["primary", "secondary"], "#ffd393", [9, 0.4, 16, 3.6], 1.2, 8),
+    glow("glow-major", ["motorway", "trunk"], "#ffb35e", [7, 0.6, 16, 7], 2.5, 6),
+    { id: "bld", type: "fill-extrusion", source: "omt", "source-layer": "building", minzoom: 12.5,
+      paint: { "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0], "fill-extrusion-height": ["coalesce", ["get", "render_height"], 0], "fill-extrusion-opacity": 0.96 } },
+  ],
+};
+const map = new maplibregl.Map({ container: "map", style, interactive: false, attributionControl: false, maxPitch: 85, fadeDuration: 0,
+                                 center: DOWNTOWN.HOU, zoom: 14, pitch: 70, canvasContextAttributes: { preserveDrawingBuffer: RECORD, antialias: true } });
+await new Promise((res, rej) => { map.once("load", res); map.once("error", ev => rej(ev.error || new Error("the map failed to load"))); });
+let lookNow = null;
+function setLook(name) {
+  if (name === lookNow) return; lookNow = name;
+  const L = LOOKS[name]; if (!L) throw new Error("no look " + name);
+  const [sat, con, bmin, bmax] = L.img;
+  map.setPaintProperty("img", "raster-saturation", sat); map.setPaintProperty("img", "raster-contrast", con);
+  map.setPaintProperty("img", "raster-brightness-min", bmin); map.setPaintProperty("img", "raster-brightness-max", bmax);
+  map.setPaintProperty("bld", "fill-extrusion-color", L.bld);
+  map.setPaintProperty("glow-major", "line-opacity", L.roads); map.setPaintProperty("glow-mid", "line-opacity", 0.75 * L.roads); map.setPaintProperty("glow-minor", "line-opacity", 0.45 * L.roads);
+  const [sky, horizon, fog, ground] = L.sky;
+  map.setSky({ "sky-color": sky, "horizon-color": horizon, "fog-color": fog, "sky-horizon-blend": 0.55, "horizon-fog-blend": 0.6, "fog-ground-blend": ground, "atmosphere-blend": 0 });
+  $("map").style.filter = L.css;
+  $("grade").style.background = L.grade[0]; $("grade").style.mixBlendMode = L.grade[1];
+}
+
+// ---- deck.gl -------------------------------------------------------------------------------------------------------
+const overlay = new MapLibreOverlay({ interleaved: true, layers: [] });
+map.addControl(overlay);
+const MODEL_KEYS = []; for (const s of ["A", "B", "C"]) for (const m of ["semi", "reefer", "box", "van"]) MODEL_KEYS.push(`${m}-${s}`);
+const FONT = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif";
+function poses(M, tick, S) {   // the trucks on the road, nose to tail where they would stand on the same spot
+  const out = [];
+  for (const t of Object.values(M.TRUCK)) {
+    const w = M.world(t.id, tick, S); if (w.parked) continue;
+    const h = heading(M, t.id, tick, S); if (h != null) w.brg = h;
+    for (const o of out) if (metersBetween(o.p, w.p) < 6 * S && Math.abs(((o.brg - w.brg + 540) % 360) - 180) < 40) w.p = step(w.p, w.brg + 180, 10 * S);
+    out.push({ t, model: M.modelOf(t), ...w });
+  }
+  return out;
+}
+function layers(ch, T, u, tick) {
+  const M = ch.run, L = LOOKS[ch.look], out = [];
+  if (ch.board) {
+    const seatLine = s => [...SEAT_RGB[s], 255];
+    const hubs = M.SEATS.map(s => ({ seat: s, city: RAW.O.seats[s].hub }));
+    out.push(
+      new D.PathLayer({ id: "roads-glow", data: M.ROADS, getPath: d => d.coords, getColor: [150, 190, 240, 70], getWidth: d => d.interstate ? 9 : 6, widthUnits: "pixels", capRounded: true, jointRounded: true }),
+      new D.PathLayer({ id: "roads", data: M.ROADS, getPath: d => d.coords, getColor: [214, 228, 246, 200], getWidth: d => d.interstate ? 2.2 : 1.5, widthUnits: "pixels", capRounded: true, jointRounded: true }),
+      new D.TripsLayer({ id: "trails", data: M.TRIPS, getPath: d => d.path, getTimestamps: d => d.ts, getColor: d => SEAT_RGB[d.seat], widthMinPixels: 5, capRounded: true, jointRounded: true, trailLength: 10, currentTime: tick, fadeTrail: true }),
+      new D.ScatterplotLayer({ id: "dots", data: Object.values(M.TRUCK).map(t => { const Lg = M.logical(t.id, tick); return { seat: t.seat, p: Lg.city ? M.CITY[Lg.city].p : M.along(Lg.a, Lg.b, Lg.mile).p, parked: !!Lg.city }; }).filter(d => !d.parked),
+        getPosition: d => d.p, getRadius: 6, radiusUnits: "pixels", getFillColor: d => seatLine(d.seat), stroked: true, getLineColor: [255, 255, 255, 230], lineWidthUnits: "pixels", getLineWidth: 1.5, updateTriggers: { getPosition: tick } }),
+      new D.ScatterplotLayer({ id: "cities", data: Object.values(M.CITY), getPosition: d => d.p, getRadius: d => d.freight ? 4 : 2.6, radiusUnits: "pixels", getFillColor: d => d.freight ? [240, 244, 250] : [170, 182, 198], stroked: true, getLineColor: [8, 10, 14], lineWidthUnits: "pixels", getLineWidth: 1.2 }),
+      new D.TextLayer({ id: "city-names", data: Object.values(M.CITY).filter(c => c.freight && !hubs.some(h => h.city === c.id)), getPosition: d => d.p, getText: d => d.name, getSize: 15, getColor: [226, 232, 242, 230], getPixelOffset: [0, -16], fontFamily: FONT, fontWeight: 600, fontSettings: { sdf: true }, outlineWidth: 4, outlineColor: [6, 8, 12, 230], characterSet: "auto" }),
+      new D.TextLayer({ id: "hub-names", data: hubs, getPosition: d => M.CITY[d.city].p, getText: d => `${M.CITY[d.city].name.toUpperCase()} · ${d.seat}`, getSize: 19, getColor: d => seatLine(d.seat), getPixelOffset: [0, -20], fontFamily: FONT, fontWeight: 800, fontSettings: { sdf: true }, outlineWidth: 5, outlineColor: [6, 8, 12, 240], characterSet: "auto" }),
+    );
+    for (const key of MODEL_KEYS) out.push(new D.ScenegraphLayer({ id: "trucks-" + key, data: [], scenegraph: `models/${key}.glb`, sizeScale: 1, _lighting: "pbr" }));
+    return out;
+  }
+  const S = S_CLOSE, P = poses(M, tick, S), moving = P.filter(d => d.L.state !== "broken" && d.L.state !== "held" && d.L.state !== "resting");
+  if (ch.closures) {
+    const shut = M.closuresAt(tick);
+    const closed = shut.map(c => ({ c, path: M.stretch(c.a, c.b, c.m0, c.m1) }));   // the closed miles only, from the barriers on
+    out.push(new D.PathLayer({ id: "closure-glow", data: closed, getPath: d => d.path, getColor: [255, 60, 50, 70], getWidth: 14, widthUnits: "pixels", capRounded: true }),
+             new D.PathLayer({ id: "closures", data: closed, getPath: d => d.path, getColor: [255, 80, 66, 210], getWidth: 3.5, widthUnits: "pixels", capRounded: true }),
+             new D.ColumnLayer({ id: "barriers", data: shut.flatMap(c => c.ends.flatMap(e => [-1.5, -0.5, 0.5, 1.5].map(k => step(e.p, e.brg + 90, k * 1.4 * S)))), getPosition: d => d,
+               radius: 0.5 * S, diskResolution: 4, getElevation: 1.4 * S, getFillColor: [235, 44, 36, 255], extruded: true }));
+  }
+  if (L.lights) {
+    const f = d => FRONT[d.model] * S, b = d => BACK[d.model] * S;
+    out.push(new D.ScatterplotLayer({ id: "beams", data: moving, getPosition: d => step(d.p, d.brg, f(d) + 5 * S), getRadius: 5 * S, radiusUnits: "meters", getFillColor: [255, 226, 160, 55], updateTriggers: { getPosition: tick } }),
+             new D.ScatterplotLayer({ id: "headlights", data: moving.flatMap(d => [-0.5, 0.5].map(k => step(step(d.p, d.brg, f(d)), d.brg + 90, k * S))), getPosition: d => d, getRadius: 3.2, radiusUnits: "pixels", getFillColor: [255, 248, 222, 250], updateTriggers: { getPosition: tick } }),
+             new D.ScatterplotLayer({ id: "taillights", data: P.flatMap(d => [-0.5, 0.5].map(k => step(step(d.p, d.brg, b(d)), d.brg + 90, k * S))), getPosition: d => d, getRadius: 2.4, radiusUnits: "pixels", getFillColor: [255, 40, 30, 230], updateTriggers: { getPosition: tick } }));
+  }
+  const broken = P.filter(d => d.L.state === "broken"), blink = (T * 1.6) % 1 < 0.5, pulse = 0.5 + 0.5 * Math.sin(T * 4);
+  if (broken.length) out.push(
+    new D.ScatterplotLayer({ id: "ring", data: broken, getPosition: d => d.p, getRadius: (7 + 2 * pulse) * S, radiusUnits: "meters", stroked: true, filled: true, getFillColor: [255, 80, 70, 40], getLineColor: [255, 80, 70, 220], lineWidthUnits: "pixels", getLineWidth: 2.5, updateTriggers: { getRadius: T } }),
+    new D.ScatterplotLayer({ id: "hazards", data: blink ? broken.flatMap(d => [FRONT[d.model], BACK[d.model]].flatMap(z => [-0.55, 0.55].map(k => step(step(d.p, d.brg, z * S), d.brg + 90, k * S)))) : [], getPosition: d => d, getRadius: 5, radiusUnits: "pixels", getFillColor: [255, 176, 40, 255], updateTriggers: { getPosition: T } }));
+  for (const key of MODEL_KEYS) {
+    const [m, s] = key.split("-");
+    out.push(new D.ScenegraphLayer({ id: "trucks-" + key, data: P.filter(d => d.t.seat === s && d.model === m), scenegraph: `models/${key}.glb`, getPosition: d => [d.p[0], d.p[1], 0], getOrientation: d => [0, 180 - d.brg, 90],
+      getColor: [...L.tint, 255], sizeScale: S, _lighting: "pbr", updateTriggers: { getPosition: tick, getOrientation: tick, getColor: ch.look } }));
+  }
+  return out;
+}
+
+// ---- weather in screen space: snow and rain fall as a function of T, so the same frame always draws the same --------
+const fx = $("fx").getContext("2d");
+function mulberry32(seed) { return () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
+const rnd = mulberry32(20210215);
+const FLAKES = [...Array(950).keys()].map(() => ({ x: rnd(), y: rnd(), z: 0.2 + 0.8 * rnd(), ph: 6.3 * rnd() }));
+const DROPS = [...Array(1200).keys()].map(() => ({ x: rnd(), y: rnd(), z: 0.2 + 0.8 * rnd() }));
+function weatherFx(kind, T, alpha) {
+  const W = 1920, H = 1080;
+  fx.clearRect(0, 0, W, H);
+  if (!kind || alpha <= 0) return;
+  if (kind === "snow") {
+    fx.fillStyle = "#fff";
+    for (const f of FLAKES) {
+      const y = ((f.y * (H + 40) + T * (55 + 150 * f.z)) % (H + 40)) - 20, x = (((f.x * W + T * 30 * f.z + 22 * f.z * Math.sin(T * 0.9 + f.ph)) % W) + W) % W;
+      fx.globalAlpha = alpha * (0.3 + 0.62 * f.z); fx.beginPath(); fx.arc(x, y, 0.7 + 2.8 * f.z ** 1.6, 0, 6.283); fx.fill();
+    }
+  } else if (kind === "rain") {
+    fx.strokeStyle = "#c9d6e2"; fx.lineCap = "round";
+    for (const d of DROPS) {
+      const len = 16 + 46 * d.z, y = ((d.y * (H + 80) + T * (1300 + 1100 * d.z)) % (H + 80)) - 40, x = (((d.x * W - y * 0.22) % W) + W) % W;
+      fx.globalAlpha = alpha * (0.1 + 0.3 * d.z); fx.lineWidth = 0.6 + 1.3 * d.z; fx.beginPath(); fx.moveTo(x, y); fx.lineTo(x - len * 0.22, y + len); fx.stroke();
+    }
+  }
+  fx.globalAlpha = 1;
+}
+
+// ---- type ----------------------------------------------------------------------------------------------------------
+const stageScale = () => { const s = innerWidth / 1920; $("stage").style.transform = `scale(${s})`; };
+addEventListener("resize", stageScale); stageScale();
+let typeKey = "";
+function type(ch, u, tick) {
+  const t = ch.type(tick, u), key = ch.id + "|" + t.html;
+  if (key !== typeKey) { typeKey = key; $("stage").innerHTML = t.html + (t.ticker ? `<div class="ticker a" data-d="0.5">${esc(t.ticker)}</div>` : ""); }
+  const out = 1 - smooth((u - (ch.dur - 0.55)) / 0.42);
+  for (const el of $("stage").querySelectorAll(".a")) {
+    const d = Number(el.dataset.d || 0), k = smooth((u - 0.25 - d) / 0.6);
+    el.style.opacity = (k * out).toFixed(3); el.style.transform = `translateY(${((1 - k) * 18).toFixed(1)}px)`;
+  }
+  const low = /blk low/.test(t.html), top = /blk top/.test(t.html);
+  $("shade").style.background = [low || top ? "linear-gradient(0deg, rgba(0,0,0,.6) 0%, rgba(0,0,0,.22) 34%, rgba(0,0,0,0) 56%)" : "",
+    top ? "linear-gradient(180deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,0) 34%)" : "", "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.35) 100%)"].filter(Boolean).join(", ");
+}
+function pills(ch, tick) {   // a label over the closed road, just inside the end where the shot's trucks wait
+  const box = $("labels"), pl = ch.pill, c = pl && ch.run.closuresAt(tick).find(c => c.closure_id === pl.closure);
+  if (!c) { box.innerHTML = ""; return; }
+  const xy = map.project(ch.run.along(c.a, c.b, pl.mile).p);
+  box.innerHTML = xy.x > 0 && xy.x < innerWidth && xy.y > 0 && xy.y < innerHeight
+    ? `<div class="pill" style="left:${xy.x}px;top:${xy.y - 40}px">${esc(pl.text.toUpperCase())}</div>` : "";
+}
+
+// ---- drawing a moment ----------------------------------------------------------------------------------------------
+let lastFrame = null;
+function draw(T) {
+  T = clamp(T, 0, DURATION - 1e-6);
+  const i = chapterAt(T), ch = CH[i], u = T - ch.t0, tick = ch.tick(u);
+  setLook(ch.look);
+  map.jumpTo(ch.cam(u, tick));
+  overlay.setProps({ layers: layers(ch, T, u, tick) });
+  const dof = ch.dof !== false; $("dof-top").style.display = $("dof-bot").style.display = dof ? "" : "none";
+  weatherFx(ch.fx, T, 1);
+  const fl = (ch.lightning || []).reduce((a, s) => Math.max(a, Math.exp(-(((u - s) / 0.045) ** 2))), 0);
+  $("flash").style.opacity = (0.55 * fl).toFixed(3);
+  type(ch, u, tick);
+  pills(ch, tick);
+  const next = CH[i + 1], first = i === 0, last = i === CH.length - 1;
+  const fin = ch.cont ? 0 : 1 - smooth(u / (first ? 0.9 : 0.32)), fout = next && next.cont ? 0 : smooth((u - (ch.dur - (last ? 1.0 : 0.26))) / (last ? 1.0 : 0.26));
+  $("black").style.opacity = Math.max(fin, fout).toFixed(3);
+  lastFrame = { T, chapter: ch.id, tick };
+}
+const idle = () => new Promise(res => { map.once("idle", res); map.triggerRepaint(); });
+async function modelsLoaded() {   // the GLBs load asynchronously: a recording must not start before they draw
+  const t0 = performance.now();
+  for (;;) {
+    const ls = (overlay._deck && overlay._deck.layerManager) ? overlay._deck.layerManager.getLayers() : [];
+    const scene = ls.filter(l => l.id.startsWith("trucks-"));
+    if (scene.length === MODEL_KEYS.length && scene.every(l => l.state && l.state.scenegraph)) return;
+    if (performance.now() - t0 > 30000) throw new Error("the truck models did not load in 30 s");
+    draw(Number(Q.get("t") || 0.5)); await new Promise(r => setTimeout(r, 100));
+  }
+}
+draw(Number(Q.get("t") || 0.5));
+await modelsLoaded();
+await document.fonts.ready;
+await idle();
+window.cinema = { duration: DURATION, ready: true, segments: CH.map(c => ({ kind: c.id, t0: c.t0, t1: c.t0 + c.dur })),
+                  async seek(T) { draw(T); await idle(); return lastFrame; }, _map: map, _overlay: overlay };   // the last two for debugging
+
+if (!RECORD) {   // play it
+  let T = Number(Q.get("t") || 0), playing = !Q.has("paused"), last = performance.now();
+  $("clock").hidden = false;
+  addEventListener("click", () => { playing = !playing; });
+  addEventListener("keydown", e => { if (e.code === "Space") playing = !playing; if (e.code === "ArrowRight") T += 2; if (e.code === "ArrowLeft") T = Math.max(0, T - 2); });
+  const loop = now => {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (playing) T = T + dt >= DURATION ? 0 : T + dt;
+    draw(T); $("clock").textContent = `${T.toFixed(1)} / ${DURATION.toFixed(1)} s · ${CH[chapterAt(T)].id}${playing ? "" : " · paused"}`;
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

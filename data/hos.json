@@ -1,0 +1,53 @@
+{
+ "regulation": "49 CFR 395.3, property-carrying drivers; the carrier operates every day (70 h / 8 days)",
+ "rules": [
+  {
+   "key": "off_duty_before_shift_h",
+   "value": 10,
+   "cfr": "395.3(a)(1)",
+   "text": "may not drive without first taking 10 consecutive hours off duty"
+  },
+  {
+   "key": "duty_window_h",
+   "value": 14,
+   "cfr": "395.3(a)(2)",
+   "text": "may not drive after a period of 14 consecutive hours after coming on-duty"
+  },
+  {
+   "key": "driving_per_shift_h",
+   "value": 11,
+   "cfr": "395.3(a)(3)(i)",
+   "text": "may drive a total of 11 hours during the period"
+  },
+  {
+   "key": "driving_before_break_h",
+   "value": 8,
+   "cfr": "395.3(a)(3)(ii)",
+   "text": "more than 8 hours of driving time have passed without at least a consecutive 30-minute interruption"
+  },
+  {
+   "key": "break_min",
+   "value": 30,
+   "cfr": "395.3(a)(3)(ii)",
+   "text": "satisfied either by off-duty, sleeper berth or on-duty not driving time"
+  },
+  {
+   "key": "cycle_h",
+   "value": 70,
+   "cfr": "395.3(b)(2)",
+   "text": "on duty 70 hours in any period of 8 consecutive days"
+  },
+  {
+   "key": "cycle_days",
+   "value": 8,
+   "cfr": "395.3(b)(2)",
+   "text": "on duty 70 hours in any period of 8 consecutive days"
+  },
+  {
+   "key": "restart_h",
+   "value": 34,
+   "cfr": "395.3(c)(2)",
+   "text": "off-duty period of 34 or more consecutive hours"
+  }
+ ]
+}

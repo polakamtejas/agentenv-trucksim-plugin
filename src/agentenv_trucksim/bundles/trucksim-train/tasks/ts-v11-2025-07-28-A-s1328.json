@@ -1,0 +1,83 @@
+[
+ {
+  "id": "deploy",
+  "type": "deploy_env",
+  "env_id": "trucksim",
+  "ttl_seconds": 16200
+ },
+ {
+  "id": "operator",
+  "type": "deploy_agent",
+  "a2a_agent_id": "trucksim-llm",
+  "agent_name": "operator",
+  "env_ids": [],
+  "ttl_seconds": 16200
+ },
+ {
+  "id": "lobby",
+  "type": "open_lobby",
+  "env_id": "trucksim",
+  "game_settings": {
+   "monday": "2025-07-28",
+   "seed": 1328,
+   "rival": "rolling-a",
+   "naive_usd": -6097.18,
+   "anchor_usd": 2112.63
+  }
+ },
+ {
+  "id": "seat-a",
+  "type": "add_player_slot",
+  "env_id": "trucksim",
+  "player_id": "A",
+  "player_kind": "agent",
+  "player_name": "operator"
+ },
+ {
+  "id": "seat-b",
+  "type": "add_player_slot",
+  "env_id": "trucksim",
+  "player_id": "B",
+  "player_kind": "ai"
+ },
+ {
+  "id": "seat-c",
+  "type": "add_player_slot",
+  "env_id": "trucksim",
+  "player_id": "C",
+  "player_kind": "ai"
+ },
+ {
+  "id": "close",
+  "type": "close_lobby",
+  "env_id": "trucksim"
+ },
+ {
+  "id": "play",
+  "type": "prompt_agent",
+  "agent_name": "operator",
+  "prompt_id": "ts-v11-2025-07-28-A-s1328",
+  "prompt": "You run seat A: a small carrier based in Dallas, with ten units (four company tractors with dry vans, one with a reefer, two box trucks, a cargo van and two owner-operators' tractors leased on to you) and twelve drivers, for the week of July 28, 2025. Two rival carriers, based in the other hubs, work the same load board. Make your carrier as profitable as you can by the end of the week.",
+  "max_turns": 24,
+  "timeout_seconds": 14400
+ },
+ {
+  "id": "finish",
+  "type": "finish_match",
+  "env_id": "trucksim"
+ },
+ {
+  "id": "files",
+  "type": "save_match_files",
+  "env_id": "trucksim",
+  "fail_task_on_error": false
+ },
+ {
+  "id": "grade",
+  "type": "env_outcome_verifier",
+  "env_id": "trucksim",
+  "file_artifact_id": "trucksim-verifier",
+  "verifier_id": "trucksim",
+  "score_aggregator": "weighted_average"
+ }
+]
