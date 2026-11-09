@@ -73,7 +73,8 @@ EPISODES = pa.schema([
     ("graded_reward", pa.float64()), ("profit_usd", pa.float64()), ("naive_usd", pa.float64()),
     ("anchor_usd", pa.float64()), ("ledger_usd", JSON), ("delivered", pa.int64()), ("missed_turns", pa.int64()),
     ("turns_ended_by_model", pa.int64()), ("tool_calls", pa.int64()), ("model_calls", pa.int64()),
-    ("input_tokens", pa.int64()), ("output_tokens", pa.int64()), ("minutes", pa.float64()),
+    ("input_tokens", pa.int64()), ("cache_read_tokens", pa.int64()), ("cache_write_tokens", pa.int64()),
+    ("output_tokens", pa.int64()), ("minutes", pa.float64()),
     ("created_utc", pa.string()), ("completed_utc", pa.string()), ("replay", pa.string()),
 ])
 TURNS = pa.schema([
@@ -210,6 +211,8 @@ def main() -> None:
             "anchor_usd": run["anchor_usd"], "ledger_usd": me["ledger_usd"], "delivered": run["delivered"],
             "missed_turns": run["missed_turns"], "turns_ended_by_model": sum(t["ended_by"] == "agent" for t in traj["turns"]),
             "tool_calls": usage["tool_calls"], "model_calls": usage["model_calls"], "input_tokens": usage["input_tokens"],
+            # parts of input_tokens: the agent marks prompt-cache breakpoints from 2026-11-09
+            "cache_read_tokens": usage["cache_read_tokens"], "cache_write_tokens": usage["cache_write_tokens"],
             "output_tokens": usage["output_tokens"], "minutes": round(traj["seconds"] / 60, 2),
             "created_utc": run["created"], "completed_utc": run["completed"],
             "replay": f"{run['task']}--{run['model'].replace('/', '_')}"})

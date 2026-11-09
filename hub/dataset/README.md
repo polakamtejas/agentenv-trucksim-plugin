@@ -161,7 +161,7 @@ All parquet. One config per table, a split per split of the tasks.
 |---|---|
 | `v11_tasks` (default) | one row per task, `eval` and `train`: its Monday, seed and seat, the week's kind and storm severity, every reference's profit (naive, the re-planner's two configurations, doing nothing) and the anchor, the operator's system prompt and the task prompt, and the lobby's `game_settings` |
 | `v11_board` | one row per model: mean reward with its 95% bootstrap interval over the weeks, its ordinary and storm means, mean profit, loads, missed turns, tokens and minutes a week |
-| `v11_episodes` | one row per run on the board: reward, profit and its whole ledger (`ledger_usd`: linehaul, fuel surcharge, detention pay, fuel, pay, owner-operators' settlements, repairs, penalties, the end-of-week charges), loads delivered, missed turns, tool and model calls, tokens and minutes |
+| `v11_episodes` | one row per run on the board: reward, profit and its whole ledger (`ledger_usd`: linehaul, fuel surcharge, detention pay, fuel, pay, owner-operators' settlements, repairs, penalties, the end-of-week charges), loads delivered, missed turns, tool and model calls, tokens (and how many of the input tokens were read from and written to the prompt cache) and minutes |
 | `v11_turns` | one row per turn of each run: the clock, who ended the turn, the agent's notes, its calls, and the turn's whole conversation as chat `messages` (system prompt, the situation, every tool call and its full output), tool-call arguments as objects, as TRL's `SFTTrainer` reads them |
 | `v11_candidates` | the candidate weeks the eval was picked from, with their references and whether each qualified |
 

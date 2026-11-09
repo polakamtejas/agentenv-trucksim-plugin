@@ -5,7 +5,10 @@ API, which the proxy serves for every model, so Claude, GPT and open models run 
 Each game turn is a fresh conversation: the rules, the operator's own notes from the turn before, and the turn's
 situation. The model acts with the seat's tools until it calls end_turn(notes); the harness then ends the env's turn
 (which waits for the other seats), keeps the notes and starts the next turn. So the context stays one turn long,
-however long the week is. A turn that runs past max_turns model calls is ended by the harness, with the notes it had."""
+however long the week is. A turn that runs past max_turns model calls is ended by the harness, with the notes it had.
+
+Every call marks prompt-cache breakpoints (_cache_marked): within a turn each call re-sends the conversation so far, so
+all but the newest messages are read from the cache, and the tools and rules are cached across the week."""
 
 import asyncio
 import json
@@ -103,6 +106,36 @@ class TruckSimConfig(AgentConfig):
     timeout_seconds: int = 7_200
 
 
+CACHE_MARK = {"type": "ephemeral"}  # Anthropic's 5-minute prompt cache; LiteLLM passes cache_control through to Claude
+
+
+def _cache_marked(messages: list) -> list:
+    """The copy of a turn's conversation sent to the model, with up to three prompt-cache breakpoints:
+    - the system prompt: the tools and the rules come before it, the same on every call of the week, so they are
+      written to the cache once and read on every call after;
+    - the last message: the next call reads everything up to it and pays full price only for what's new;
+    - the message before the last assistant reply, the previous call's last message: the cache entry that call wrote,
+      marked again so this call finds it however many tool results the reply added (Anthropic looks back only 20
+      blocks from a breakpoint for an earlier entry).
+    A cache read is billed at a tenth of the input price, a cache write at 1.25 times. The turn's own `messages`, the
+    transcript, stay unmarked."""
+    last_reply = max((i for i, m in enumerate(messages) if m["role"] == "assistant"), default=None)
+    marks = {0, len(messages) - 1} | ({last_reply - 1} if last_reply is not None else set())
+    out = list(messages)
+    for i in marks:
+        if not isinstance(out[i]["content"], str):
+            raise TypeError(f"message {i} ({out[i]['role']}) has no text content to mark for the prompt cache")
+        out[i] = {**out[i], "content": [{"type": "text", "text": out[i]["content"], "cache_control": CACHE_MARK}]}
+    return out
+
+
+def _cache_usage(usage) -> tuple[int, int]:
+    """(cache-read, cache-write) input tokens of one call, as LiteLLM reports Claude's: prompt_tokens counts every
+    input token, these included."""
+    return (getattr(usage, "cache_read_input_tokens", None) or 0,
+            getattr(usage, "cache_creation_input_tokens", None) or 0)
+
+
 def _text(result) -> str:
     out = "\n".join(c.text for c in result.content if getattr(c, "type", None) == "text")
     return f"ERROR: {out}" if result.isError else out
@@ -110,7 +143,7 @@ def _text(result) -> str:
 
 async def _complete(client: AsyncOpenAI, cfg: TruckSimConfig, messages: list, tools: list):
     """One model call, retried on rate limits, 5xx and dropped connections (3 tries, backing off)."""
-    kwargs = {"model": cfg.model, "messages": messages, "tools": tools, "max_tokens": cfg.max_tokens}
+    kwargs = {"model": cfg.model, "messages": _cache_marked(messages), "tools": tools, "max_tokens": cfg.max_tokens}
     if cfg.effort:
         kwargs["reasoning_effort"] = cfg.effort
     for attempt in range(3):
@@ -145,7 +178,10 @@ class TruckSimAgent(AgentEnvAgent):
                              default_headers=headers or None, timeout=300)
         task_text = "\n".join(p.text for p in request.parts if isinstance(p, TextPart))
         system = RULES + (f"\n\n{cfg.system_prompt}" if cfg.system_prompt else "")
-        usage = {"input_tokens": 0, "output_tokens": 0, "tool_calls": 0, "model_calls": 0}
+        # input_tokens counts every input token; cache_read_tokens and cache_write_tokens are the parts of it read from
+        # and written to the prompt cache
+        usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0,
+                 "tool_calls": 0, "model_calls": 0}
         turns, notes, started = [], "(none yet: this is your first turn)", time.monotonic()
 
         async with AsyncExitStack() as stack:
@@ -182,6 +218,9 @@ class TruckSimAgent(AgentEnvAgent):
                     if resp.usage:
                         usage["input_tokens"] += resp.usage.prompt_tokens or 0
                         usage["output_tokens"] += resp.usage.completion_tokens or 0
+                        read, write = _cache_usage(resp.usage)
+                        usage["cache_read_tokens"] += read
+                        usage["cache_write_tokens"] += write
                     msg = resp.choices[0].message
                     messages.append(msg.model_dump(exclude_none=True))
                     if msg.content:
@@ -216,13 +255,16 @@ class TruckSimAgent(AgentEnvAgent):
         final = json.loads(situation)
         summary = (f"Week over for seat {final.get('seat')}: profit {final.get('profit_usd')} USD after "
                    f"{len(turns)} turns ({sum(t['ended_by'] == 'agent' for t in turns)} ended by the model); "
-                   f"{usage['model_calls']} model calls, {usage['input_tokens']} input and {usage['output_tokens']} output tokens.")
+                   f"{usage['model_calls']} model calls, {usage['input_tokens']} input tokens ({usage['cache_read_tokens']} read "
+                   f"from the prompt cache, {usage['cache_write_tokens']} written to it) and {usage['output_tokens']} output.")
         return TaskResult.success(
             parts=(TextPart(text=summary),),
             usage=Usage(tool_call_count=usage["tool_calls"], input_tokens=usage["input_tokens"],
                         output_tokens=usage["output_tokens"],
                         total_tokens=usage["input_tokens"] + usage["output_tokens"],
                         provider_details={"model": cfg.model, "model_calls": usage["model_calls"],
+                                          "cache_read_tokens": usage["cache_read_tokens"],
+                                          "cache_write_tokens": usage["cache_write_tokens"],
                                           "seconds": round(time.monotonic() - started, 1)}),
             native_trajectory=NativeTrajectory(format=TRAJECTORY_FORMAT, payload={
                 "model": cfg.model, "seat": final.get("seat"), "profit_usd": final.get("profit_usd"), "usage": usage,
