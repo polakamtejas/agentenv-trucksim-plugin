@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TruckSimEnv Trailer</title>
-<!-- A one-minute trailer cut from the pilot's real runs (site.json's pilot-v11 runs): each chapter is one moment of one
+<!-- A one-minute trailer cut from a site's real runs (site.json's: the board's, board-v11): each chapter is one moment of one
      run, drawn where it happened. The ground is USGS aerial imagery, the cities OpenStreetMap's buildings (OpenFreeMap's
      tiles), the trucks Kenney's models at the run's own positions, and every number on screen is read from the runs.
      ?record=1 is the renderer's mode (scripts/render_cinema.py trailer): window.cinema.seek(t) draws the frame at t
@@ -52,6 +52,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .stat b small { font-size: 64px; letter-spacing: -.02em; color: rgba(255,255,255,.6); margin: 0 14px; }
 .stat span { display: block; margin-top: 14px; font: 500 14px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: rgba(255,255,255,.8); }
 .stat.ref b { color: var(--amber); } .stat.low b { color: rgba(255,255,255,.58); }
+.stats.many { gap: 72px; } .stats.many .stat b { font-size: 84px; } .stats.many .stat b small { font-size: 46px; margin: 0 10px; }
 .foot { position: absolute; left: 96px; bottom: 60px; font-size: 16px; line-height: 1.4; color: rgba(255,255,255,.66); max-width: 1380px; }
 .ticker { position: absolute; right: 96px; bottom: 62px; font: 500 13px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.6); text-align: right; white-space: nowrap; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
 .credits { position: absolute; right: 96px; bottom: 140px; display: grid; grid-template-columns: auto auto; gap: 16px 16px; align-items: center; }
@@ -107,10 +108,10 @@ const $ = id => document.getElementById(id);
 // ---- the runs it is cut from ---------------------------------------------------------------------------------------
 const SITE = await getJSON("site.json");
 const SHAPES = await getJSON("road_shapes.json");
-const OPUS = "anthropic/claude-opus-5-5", HAIKU = "anthropic/claude-haiku-5-5";
+const OPUS = "anthropic/claude-opus-5-5";
 function runOn(monday, model) {
   const r = (SITE.runs || []).find(r => r.monday === monday && r.model === model);
-  if (!r) throw new Error(`site.json has no run of the week of ${monday} by ${model}: the trailer is cut from the pilot-v11 site`);
+  if (!r) throw new Error(`site.json has no run of the week of ${monday} by ${model}: the trailer is cut from the board-v11 site`);
   return r;
 }
 const best = (SITE.runs || []).filter(r => r.model === OPUS && r.reward != null).sort((x, y) => y.reward - x.reward || (x.task < y.task ? -1 : 1))[0];
@@ -142,7 +143,7 @@ const DOWNTOWN = { HOU: [-95.3665, 29.7590], AUS: [-97.7431, 30.2690], DAL: [-96
 // A semi is 8.5 model units long: at this many meters a unit, the close shots draw it about 3 times life size.
 const S_CLOSE = 7.5;
 const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
-function pilotScore(model, kind) {   // a model's mean score over the site's weeks of one kind
+function weekScore(model, kind) {   // a model's mean score over the site's weeks of one kind
   const xs = SITE.runs.filter(r => r.model === model && r.kind === kind && r.reward != null).map(r => r.reward);
   if (!xs.length) throw new Error(`site.json has no ${kind} weeks by ${model}`);
   return { v: mean(xs), n: xs.length };
@@ -336,45 +337,31 @@ const CH = [];
       <div class="stat low a" data-d="0.75"><b>${money(refs.naive_usd, true)}</b><span>A greedy dispatcher, in its seat</span></div></div>
       <div class="foot a" data-d="0.9">Profit for the week: revenue earned minus every cost paid. Same freight, same storms, same rivals; the optimizer re-plans with CP-SAT every six hours.</div>` }) });
 }
-{ // 9. the pilot: the two models over ordinary and storm weeks, said the way the scores have it
-  const sc = { [OPUS]: { ord: pilotScore(OPUS, "ordinary"), storm: pilotScore(OPUS, "storm") }, [HAIKU]: { ord: pilotScore(HAIKU, "ordinary"), storm: pilotScore(HAIKU, "storm") } };
+{ // 9. the board: every model over the ordinary and the storm weeks, said the way the scores have it
+  const models = [...new Set(SITE.runs.map(r => r.model))]
+    .map(m => ({ m, ord: weekScore(m, "ordinary"), storm: weekScore(m, "storm") }))
+    .sort((x, y) => (y.ord.v * y.ord.n + y.storm.v * y.storm.n) / (y.ord.n + y.storm.n)
+                  - (x.ord.v * x.ord.n + x.storm.v * x.storm.n) / (x.ord.n + x.storm.n));
+  if (models.length < 2) throw new Error("the board chapter needs two models or more");
   const weeks = new Set(SITE.runs.map(r => r.task)).size, nm = m => shortModel(m);
-  const tally = {};   // in the storm weeks: loads each model won, and the late penalties it paid
-  for (const r of SITE.runs.filter(r => r.kind === "storm" && (r.model === OPUS || r.model === HAIKU))) {
-    const R = await getJSON(`runs/${encodeURIComponent(r.id)}.json`), s = R.result.model_seats[0], t = tally[r.model] ||= { won: 0, late: 0 };
-    t.won += R.events.filter(e => e.kind === "claim_won" && e.seat === s).length; t.late += R.seats[s].ledger_usd.late_penalty || 0;
-  }
-  const dOrd = sc[OPUS].ord.v - sc[HAIKU].ord.v, dStorm = sc[OPUS].storm.v - sc[HAIKU].storm.v;
-  const stormWins = { [OPUS]: 0, [HAIKU]: 0 };   // storm weeks each model scored higher in, the two in the same seat
-  for (const task of new Set(SITE.runs.filter(r => r.kind === "storm").map(r => r.task))) {
-    const [a, b] = [OPUS, HAIKU].map(m => SITE.runs.find(r => r.task === task && r.model === m));
-    if (a && b && a.reward != null && b.reward != null && a.reward !== b.reward) stormWins[a.reward > b.reward ? OPUS : HAIKU]++;
-  }
+  const lead = kind => models.reduce((a, b) => (b[kind].v > a[kind].v ? b : a));
+  const ordW = lead("ord"), stW = lead("storm");
+  const list = xs => xs.length < 3 ? xs.join(" and ") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`;
   let head, sub;
-  if (dOrd !== 0 && Math.abs(dStorm) < Math.abs(dOrd) && stormWins[OPUS] > 0 && stormWins[HAIKU] > 0) {
-    // the storm weeks split between the models: the ordinary-week leader's edge shrinks, and neither model sweeps them
-    const ordW = dOrd > 0 ? OPUS : HAIKU, other = ordW === OPUS ? HAIKU : OPUS, wk = n => `${n} storm week${n === 1 ? "" : "s"}`;
-    head = "Storms close the gap.";
-    sub = `${nm(ordW)} leads the ordinary weeks by ${Math.abs(dOrd).toFixed(2)}. When the weather turns, the two finish within ${Math.abs(dStorm).toFixed(2)}: ${nm(ordW)} wins ${wk(stormWins[ordW])}, ${nm(other)} ${wk(stormWins[other])}.`;
-  } else if (dOrd * dStorm < 0) {
-    const ordW = dOrd > 0 ? OPUS : HAIKU, stW = ordW === OPUS ? HAIKU : OPUS;
+  if (ordW === stW) {
+    head = `${nm(ordW.m)} leads, rain or shine.`;
+    sub = `On average it scores higher than ${list(models.filter(x => x !== ordW).map(x => nm(x.m)))} in the ordinary weeks and in the storm weeks.`;
+  } else {
     head = "Storms flip the ranking.";
-    sub = tally[ordW].won > tally[stW].won && tally[ordW].late > tally[stW].late
-      ? `In storm weeks ${nm(ordW)} takes on more loads (${tally[ordW].won} to ${nm(stW)}'s ${tally[stW].won}) and pays for the late ones: ${money(tally[ordW].late)} in late penalties to ${money(tally[stW].late)}.`
-      : `${nm(ordW)} leads the ordinary weeks; when the weather turns, ${nm(stW)} does.`;
-  } else if (dOrd !== 0 && dStorm !== 0) {
-    const w = dOrd > 0 ? OPUS : HAIKU;
-    head = `${nm(w)} leads, rain or shine.`;
-    sub = `It scores higher than ${nm(w === OPUS ? HAIKU : OPUS)} in the ordinary weeks and in the storm weeks.`;
-  } else { head = "Two models, real weeks."; sub = "Each scored on the same freight and the same storms, in the same seat."; }
-  const f = x => x.v.toFixed(2), t0 = 96 + 13 * 4, dur = 6.5;
-  CH.push({ id: "pilot", dur, run: U, look: "snow", fx: "snow", tick: u => t0 + u * 0.004,
+    sub = `${nm(ordW.m)} leads the ordinary weeks; when the weather turns, ${nm(stW.m)} does.`;
+  }
+  const f = x => x.v.toFixed(2), t0 = 96 + 13 * 4, dur = 6.5, tile = ["", " ref", " low"];
+  CH.push({ id: "board", dur, run: U, look: "snow", fx: "snow", tick: u => t0 + u * 0.004,
     cam: u => view(DOWNTOWN.DAL, lerp(14.2, 14.45, smooth(u / dur)), 70, 330 + 4 * u),
-    type: () => ({ html: `<div class="blk top"><div class="eyebrow a">The pilot · ${weeks} real weeks · ${sc[OPUS].ord.n} ordinary, ${sc[OPUS].storm.n} storm</div><div class="head a" data-d="0.1">${esc(head)}</div>
+    type: () => ({ html: `<div class="blk top"><div class="eyebrow a">The board · ${weeks} real weeks · ${models[0].ord.n} ordinary, ${models[0].storm.n} storm</div><div class="head a" data-d="0.1">${esc(head)}</div>
       <div class="sub a" data-d="0.2">${esc(sub)}</div></div>
-      <div class="stats"><div class="stat a" data-d="0.45"><b>${f(sc[OPUS].ord)}<small>→</small>${f(sc[OPUS].storm)}</b><span>${nm(OPUS)} · ordinary → storm weeks</span></div>
-      <div class="stat ref a" data-d="0.6"><b>${f(sc[HAIKU].ord)}<small>→</small>${f(sc[HAIKU].storm)}</b><span>${nm(HAIKU)} · ordinary → storm weeks</span></div></div>
-      <div class="foot a" data-d="0.8">Score: 0.2 is a greedy dispatcher's week in the model's seat, 1.0 the optimizer's; above 1.0 beats it. Mean over the pilot's weeks.</div>` }) });
+      <div class="stats${models.length > 2 ? " many" : ""}">${models.slice(0, 3).map((x, i) => `<div class="stat${tile[i]} a" data-d="${(0.45 + 0.15 * i).toFixed(2)}"><b>${f(x.ord)}<small>→</small>${f(x.storm)}</b><span>${nm(x.m)} · ordinary → storm weeks</span></div>`).join("")}</div>
+      <div class="foot a" data-d="0.9">Score: 0.2 is a greedy dispatcher's week in the model's seat, 1.0 the optimizer's; above 1.0 beats it. Mean over the board's weeks.</div>` }) });
 }
 { // 10-11. the close: Houston at dusk, then the title again
   const t0 = 96 + 19 * 4, dur = 5.5, card = 4.5;

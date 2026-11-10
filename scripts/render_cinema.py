@@ -1,4 +1,4 @@
-"""Watch or record a run's 3D playthrough (viewer/cinema.html), or the trailer cut from the pilot (viewer/trailer.html).
+"""Watch or record a run's 3D playthrough (viewer/cinema.html), or the trailer cut from the board (viewer/trailer.html).
 
   serve           serve a site folder (written by collect_runs.py) on 127.0.0.1: open /cinema.html?run=<id> to watch
                   a run, /trailer.html for the trailer
@@ -7,15 +7,15 @@
                   page draws each frame when told to (window.cinema.seek) and waits for its map tiles, and the frames go
                   to ffmpeg. So the video doesn't depend on how fast a frame draws: the same run always gives the same frames.
   trailer-stills  stills of the trailer
-  trailer         record the trailer the same way (trailer.html?record=1; it reads the pilot-v11 runs from site.json)
+  trailer         record the trailer the same way (trailer.html?record=1; it reads the board-v11 runs from site.json)
 
 Usage (from the repo root):
-  .venv/bin/python scripts/render_cinema.py serve  results/site/pilot-v11 [--port 8793]
-  .venv/bin/python scripts/render_cinema.py stills results/site/pilot-v11 <run id> 12 40 95 [--dir results/videos/stills]
-  .venv/bin/python scripts/render_cinema.py render results/site/pilot-v11 <run id> [--out results/videos/<run id>.mp4]
+  .venv/bin/python scripts/render_cinema.py serve  results/site/board-v11 [--port 8793]
+  .venv/bin/python scripts/render_cinema.py stills results/site/board-v11 <run id> 12 40 95 [--dir results/videos/stills]
+  .venv/bin/python scripts/render_cinema.py render results/site/board-v11 <run id> [--out results/videos/<run id>.mp4]
                                                    [--fps 30] [--from 0] [--to <seconds>]
-  .venv/bin/python scripts/render_cinema.py trailer-stills results/site/pilot-v11 3 10 22 [--dir results/videos/stills]
-  .venv/bin/python scripts/render_cinema.py trailer results/site/pilot-v11 [--out results/videos/trucksim-trailer.mp4]
+  .venv/bin/python scripts/render_cinema.py trailer-stills results/site/board-v11 3 10 22 [--dir results/videos/stills]
+  .venv/bin/python scripts/render_cinema.py trailer results/site/board-v11 [--out results/videos/trucksim-trailer.mp4]
 Needs: the `video` extra (playwright), Google Chrome, ffmpeg. The pages fetch their map tiles from OpenFreeMap (and the
 trailer its aerial imagery from USGS), so the machine needs the internet."""
 

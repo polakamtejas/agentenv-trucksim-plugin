@@ -218,7 +218,13 @@ Left, in order:
      leaves the cached tokens out, so the agent (v13) adds them back: `input_tokens` is every input token, as in the
      pilot. The system-prompt breakpoint alone didn't cache in the check (2 tools + the rules: likely under the
      models' minimum length); within a turn, where nearly all the input is, it does.
+   - **Board done 2026-11-10** (`results/board-v11.md`; 45 of 45 runs scored, 0 missed turns): Opus 5.5 **0.967**
+     (0.80-1.16), +$1,649/wk; Sonnet 5.5 **0.760** (0.64-0.90), -$308/wk; Haiku 5.5 **0.721** (0.58-0.89), -$894/wk.
+     Opus leads the ordinary weeks (0.85 vs 0.64 and 0.59) and the storm weeks (1.19 vs 1.00 and 0.99). The cache read
+     69-75% of the input tokens: ~$181 at list prices for the three models (~$375 without it). 3 h 50 min in all.
 3. Build: `collect_runs.py`, `build_hf.py`, `build_space.py`; re-render the trailer and the hero from the board.
+   Done 2026-11-10: the trailer's results chapter is the board's now (every model, `weekScore`), the hero is its first
+   4 s again (`hub/dataset/assets/`), `results/hf/` (git-ignored) holds the dataset, the Space and the two dry runs.
 4. Dry run: `agent-env hf publish trucksim --out DIR`; read the transcripts and the key scan.
 5. GitHub: a fresh repo, no history (your call 2026-11-06): `polakamtejas/agentenv-trucksim-plugin`, one commit of
    the tree; the history stays in the private `polakamtejas/agentenv-trucksim-plugin-dev`. Going public is your
@@ -240,7 +246,7 @@ Left, in order:
 | Road geometry source | **settled:** OSM via the OSRM demo server (ODbL, attributed; only `roads.json` is ODbL). FHWA's shapefiles would need topology work to route on, for no fidelity gain | M2 |
 | Cost figures | **settled:** FHWA VM-1 (6.68 mpg) and BLS OEWS ($28.71/h) are fetched; ATRI's report is behind a form, so repair, tires, lease, insurance and detention terms are marked `assumption` in `costs.json` | M2 |
 | Barrier timeouts | OpenCiv3's (5 min idle, 10% rule, 30 min tool timeout) | M5 |
-| GitHub repo | **decided:** `polakamtejas/agentenv-trucksim-plugin`, fresh with no history (2026-11-06); the history is in private `polakamtejas/agentenv-trucksim-plugin-dev` | made, public on your command |
+| GitHub repo | **decided:** `polakamtejas/agentenv-trucksim-plugin`, fresh with no history (2026-11-06); the history is in private `polakamtejas/agentenv-trucksim-plugin-dev` | public 2026-11-10 (on your ask) |
 | HF org | **settled** 2026-11-06: your own HF account ("a new repo under my name") | M11 |
 
 ## Framework notes (from the generic plan)
