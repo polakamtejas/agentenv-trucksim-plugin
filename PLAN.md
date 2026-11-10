@@ -204,7 +204,7 @@ the extra"):
 Left, in order:
 1. agentenv-hf: installed 2026-11-06 (`agent-env plugin add --yes 'agentenv-hf @ git+https://github.com/earakely-scale/
    agentenv-hf-plugin@v0.3.0'`; it moves huggingface_hub to 1.33, the tests pass). The HF account and a write token:
-   you're making them (the `HF_TOKEN` in ~/.zshrc is rejected).
+   the account is `tahougoreng` (2026-11-10): dataset `tahougoreng/TruckSimEnv-AgentEnv` and the Space under it; a fine-grained token with repo.write is in ~/.zshrc's `HF_TOKEN` line (it overrides `hf auth login`), checked with `hf auth whoami`.
 2. The board (your go 2026-11-09: Opus 5.5, Sonnet 5.5, Haiku 5.5, with prompt caching): all 15 eval weeks per
    model on the fixed prompt and the new agent; one run a model-week; `scripts/run_board.sh MODEL ...` (the models
    one after another, four weeks at a time: the Docker VM has 4 CPUs, as in the pilot). `hf publish --instance` with
@@ -213,8 +213,11 @@ Left, in order:
      LiteLLM passes through) on the system prompt, the last message and the previous call's last message, on the
      copy it sends; the transcript stays unmarked (`tests/test_agent.py`). The usage records `cache_read_tokens` and
      `cache_write_tokens`, parts of `input_tokens`; the episodes table carries them. Smoke 1.0/0.2 on the new image.
-   - **Blocked 2026-11-09:** the LiteLLM key in `~/.config/trucksim/secrets.yaml` is rejected (401
-     `token_not_found_in_db`); it worked on 2026-11-03. Needs a new key, then the live cache check and the sweep.
+   - **Live check 2026-11-10** (new LiteLLM key; the old one was revoked): on Haiku, Sonnet and Opus 5.5 a call
+     re-sending the previous call's prompt read all 10,865 of its tokens from the cache. The proxy's `prompt_tokens`
+     leaves the cached tokens out, so the agent (v13) adds them back: `input_tokens` is every input token, as in the
+     pilot. The system-prompt breakpoint alone didn't cache in the check (2 tools + the rules: likely under the
+     models' minimum length); within a turn, where nearly all the input is, it does.
 3. Build: `collect_runs.py`, `build_hf.py`, `build_space.py`; re-render the trailer and the hero from the board.
 4. Dry run: `agent-env hf publish trucksim --out DIR`; read the transcripts and the key scan.
 5. GitHub: a fresh repo, no history (your call 2026-11-06): `polakamtejas/agentenv-trucksim-plugin`, one commit of

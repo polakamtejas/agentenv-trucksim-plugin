@@ -130,8 +130,9 @@ def _cache_marked(messages: list) -> list:
 
 
 def _cache_usage(usage) -> tuple[int, int]:
-    """(cache-read, cache-write) input tokens of one call, as LiteLLM reports Claude's: prompt_tokens counts every
-    input token, these included."""
+    """(cache-read, cache-write) input tokens of one call, as LiteLLM reports Claude's. They are NOT in prompt_tokens,
+    which counts only the input that was neither (checked on the proxy for Haiku, Sonnet and Opus 5.5, 2026-11-10: a
+    call writing 10,865 tokens to the cache reported prompt_tokens 4). A model without a cache reports neither: 0."""
     return (getattr(usage, "cache_read_input_tokens", None) or 0,
             getattr(usage, "cache_creation_input_tokens", None) or 0)
 
@@ -178,8 +179,8 @@ class TruckSimAgent(AgentEnvAgent):
                              default_headers=headers or None, timeout=300)
         task_text = "\n".join(p.text for p in request.parts if isinstance(p, TextPart))
         system = RULES + (f"\n\n{cfg.system_prompt}" if cfg.system_prompt else "")
-        # input_tokens counts every input token; cache_read_tokens and cache_write_tokens are the parts of it read from
-        # and written to the prompt cache
+        # input_tokens counts every input token, as the pilot's did before the cache; cache_read_tokens and
+        # cache_write_tokens are the parts of it read from and written to the prompt cache
         usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0,
                  "tool_calls": 0, "model_calls": 0}
         turns, notes, started = [], "(none yet: this is your first turn)", time.monotonic()
@@ -216,9 +217,9 @@ class TruckSimAgent(AgentEnvAgent):
                         break
                     usage["model_calls"] += 1
                     if resp.usage:
-                        usage["input_tokens"] += resp.usage.prompt_tokens or 0
-                        usage["output_tokens"] += resp.usage.completion_tokens or 0
                         read, write = _cache_usage(resp.usage)
+                        usage["input_tokens"] += (resp.usage.prompt_tokens or 0) + read + write
+                        usage["output_tokens"] += resp.usage.completion_tokens or 0
                         usage["cache_read_tokens"] += read
                         usage["cache_write_tokens"] += write
                     msg = resp.choices[0].message
