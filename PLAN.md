@@ -21,7 +21,7 @@ matches.
 | M8 | Viewer: V0 charts → V1 board replay → V2 compare | - | M | **done** 2026-10-21: TruckSim runs (`viewer/app.html`) in PortSim's style: Overview, Explorer, run pages with a fleet chart, ghost runs and live games; built by `scripts/collect_runs.py` and served by `scripts/live.py` |
 | M9 | Calibration sweep + validity audit | 6 | M | **v1 pilot done** 2026-10-20 (`results/pilot.md`, uncapped: Opus 0.926, Haiku 0.708); kept as v1 history. The full sweep waits for v1.1 (M16) |
 | M10 | Plugin packaging, CLI, CI | 7 | S | **done** 2026-10-20: entry points, `agent-env trucksim setup/replay`, CI green, NOTICE; fresh git install checked. No LICENSE yet, by your choice (decide before publishing) |
-| M11 | Publish to HF (only with your go-ahead: it is public) | 8 | M | **in progress** 2026-11-06: go given (your name, Apache-2.0, a train split and the extra tables); the board's sweep and the pushes are left, see M11 |
+| M11 | Publish to HF (only with your go-ahead: it is public) | 8 | M | **published** 2026-11-10 (dataset and Space `tahougoreng/TruckSimEnv-AgentEnv`, plugin v0.1.1); the FineEnvs PR is left, see M11 |
 | M12 | v1.1 board: more cities and back roads; storms on the roads they cross | - | M | **done** 2026-10-21: 24 cities (14 freight, McAllen = 78% of zone 489's Mexico truck trade), 38 roads, storms on county stretches (13,768 records); v1.1 references (35/40 qualify) and tasks `ts-v11-*`; smoke 1.0/0.2 in Docker |
 | M13 | v1.1 weather road closures (NOAA narratives + modeled), detours, the adverse-conditions hours exception | - | M | **done** 2026-10-21: 59 real closures (127 narratives read), modeled ones (mean 1.7/week, Uri 38), detours/waits/turn-backs, 395.1(b)(1) in clock and checker; references rebuilt (Uri: naive -$6,631, anchor -$531); smoke 1.0/0.2 in Docker |
 | M14 | v1.1 fleet mix (tractors, box trucks, a van), load sizes, partials sharing a trailer, volume | - | L | **done** 2026-10-21: 8 company units/seat (VEHICLES classes, VM-1 mpg, BLS 53-3033), full/partial/small loads with fits, stops (each id twice), shipper batches (re-planner shares 8-14x/week), small/partial prices calibrated; truck forks for plan_trip (4x faster); 40/40 weeks qualify (anchor +$0.3-4.4k, naive -$2-15k); smoke 1.0/0.2 |
@@ -233,6 +233,15 @@ Left, in order:
 6. Push: our card and tables, then `hf publish trucksim-train` and `hf publish trucksim --instance ... --requires
    ... --setup 'agent-env trucksim setup' --tag v0.1.0`; the Space.
 7. FineEnvs: the README and `results/eval-v1.1.json` next to project.yaml; PR (maybe discussion #36 first).
+   **Pushed 2026-11-10** (your go): GitHub tag v0.1.0, then the dataset (our card and tables), `hf publish
+   trucksim-train`, `hf publish trucksim` with the board's 45 runs and `--tag v0.1.0`, and the static Space. Running
+   the card's commands in a fresh venv (own `XDG_STATE_HOME`, no config) failed at `agent-env trucksim setup`: a git
+   install has no Dockerfiles, and setup wanted a checkout. v0.1.1 builds from the repo at the commit the install came
+   from (PEP 610 `direct_url.json`; Docker fetches the git context), as PortSim's setup does; the cards now pin v0.1.1
+   and the dataset carries tags v0.1.0 (the first push) and v0.1.1. FineEnvs: the entry (manifest, README, banner,
+   eval card, board, the 07 catalog card and evals row, the root table row written by hand in build_index.py's format:
+   the classifier blocks running FineEnvs' own script) is committed on a local branch `add-trucksimenv` of a scratch
+   clone; the fork and the PR wait for your go.
 
 ## Choices settled along the way (default → where it's settled)
 
