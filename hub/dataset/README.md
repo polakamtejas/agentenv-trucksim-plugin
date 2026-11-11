@@ -189,7 +189,7 @@ OpenAI-compatible endpoint (a LiteLLM proxy, set as `[model]` in `.agentenv/conf
 uv tool install agentenv-framework \
     --with "agentenv-trucksim @ git+https://github.com/{{GITHUB}}@{{VERSION}}" \
     --with "agentenv-hf @ git+https://github.com/earakely-scale/agentenv-hf-plugin@v0.3.0"
-agent-env trucksim setup
+agent-env trucksim setup        # builds the env and agent images from the plugin's commit on GitHub, a few minutes
 agent-env hf run {{HF_REPO}}@{{VERSION}} --bundle trucksim --task smoke-anchor     # no model: grades 1.0
 agent-env hf run {{HF_REPO}}@{{VERSION}} --bundle trucksim --task {{EXAMPLE_TASK}} \
     --model anthropic/claude-opus-5-5

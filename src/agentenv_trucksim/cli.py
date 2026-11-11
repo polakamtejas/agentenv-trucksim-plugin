@@ -1,7 +1,9 @@
 """`agent-env trucksim`: build and register the env and the operator agent, and build replay pages."""
 
+import json
 import subprocess
 import webbrowser
+from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 
 import click
@@ -11,15 +13,39 @@ ENV_IMAGE = "agentenv-trucksim-env"
 AGENT_ID = "trucksim-llm"
 AGENT_IMAGE = "agentenv-trucksim-llm"
 DEFAULT_MODEL = "anthropic/claude-haiku-5-5"
+REPO = "https://github.com/polakamtejas/agentenv-trucksim-plugin"
 
 
-def _checkout(source: Path | None) -> Path:
-    """The repo checkout to build from: --source, else the one an editable install runs from, else the cwd."""
+def _installed_commit() -> str | None:
+    """The git commit a `pip install git+...` or a uv git source installed this package from (PEP 610's
+    direct_url.json), or None for an install that didn't come from git."""
+    try:
+        direct = json.loads(distribution("agentenv-trucksim").read_text("direct_url.json") or "{}")
+    except PackageNotFoundError:
+        return None
+    return direct.get("vcs_info", {}).get("commit_id")
+
+
+def _checkout(source: Path | None) -> str:
+    """What to build from: --source, else the checkout an editable install runs from, else the cwd, else the commit of
+    this repo a git install came from, as a git URL Docker fetches itself as the build context (as PortSim's setup)."""
     for root in [source] if source else [Path(__file__).resolve().parents[2], Path.cwd()]:
-        if root and (root / "Dockerfile").is_file() and (root / "trucksim_core").is_dir() and (root / "agents" / AGENT_ID).is_dir():
-            return root
-    raise click.UsageError("no checkout of agentenv-trucksim-plugin found: clone it and pass --source "
+        if (root / "Dockerfile").is_file() and (root / "trucksim_core").is_dir() and (root / "agents" / AGENT_ID).is_dir():
+            return str(root)
+    if source:
+        raise click.UsageError(f"{source} is not a checkout of agentenv-trucksim-plugin (no Dockerfile, trucksim_core/ "
+                               f"and agents/{AGENT_ID}/)")
+    if commit := _installed_commit():
+        return f"{REPO}.git#{commit}"
+    raise click.UsageError(f"no checkout of agentenv-trucksim-plugin found: clone {REPO} and pass --source "
                            "(the images are built from the repo's Dockerfiles)")
+
+
+def _context(root: str, subdir: str | None = None) -> str:
+    """The build context of ``subdir`` of ``root``: a folder, or for a git URL its ``#commit:subdir`` form."""
+    if not subdir:
+        return root
+    return f"{root}:{subdir}" if "#" in root else str(Path(root) / subdir)
 
 
 def _docker_platform() -> str:
@@ -29,9 +55,10 @@ def _docker_platform() -> str:
     return out.stdout.strip()
 
 
-def _build(tag: str, context: Path, dockerfile: Path, platform: str) -> None:
-    click.echo(f"Building {tag} for {platform}")
-    if subprocess.run(["docker", "build", "--platform", platform, "-t", tag, "-f", str(dockerfile), str(context)]).returncode:
+def _build(tag: str, context: str, platform: str) -> None:
+    """Build ``tag`` from the Dockerfile at the top of ``context`` (a folder or a git URL)."""
+    click.echo(f"Building {tag} for {platform} from {context}")
+    if subprocess.run(["docker", "build", "--platform", platform, "-t", tag, context]).returncode:
         raise click.ClickException(f"docker build of {tag} failed")
 
 
@@ -52,11 +79,11 @@ def setup(source: Path | None, platform_: str | None, model: str):
     from agent_env.env import MCPServerEnv
 
     root, platform_ = _checkout(source), platform_ or _docker_platform()
-    _build(ENV_IMAGE, root, root / "Dockerfile", platform_)
+    _build(ENV_IMAGE, _context(root), platform_)
     art = DockerImageArtifact.put(id=ENV_IMAGE, image_name=ENV_IMAGE, description="TruckSimEnv env: the sim core as a game env")
     env = MCPServerEnv.put(id=ENV_ID, docker_image_artifact=art, environment_name=ENV_ID, env_provider_type="server")
     click.echo(f"Registered env {env.id!r} version {env.version}")
-    _build(AGENT_IMAGE, root / "agents" / AGENT_ID, root / "agents" / AGENT_ID / "Dockerfile", platform_)
+    _build(AGENT_IMAGE, _context(root, f"agents/{AGENT_ID}"), platform_)
     art = DockerImageArtifact.put(id=AGENT_IMAGE, image_name=AGENT_IMAGE, description="trucksim-llm: one model operating one seat")
     agent = A2AAgent.put(id=AGENT_ID, docker_image_artifact=art, metadata={"default_model": model})
     click.echo(f"Registered A2A agent {agent.id!r} version {agent.version}")

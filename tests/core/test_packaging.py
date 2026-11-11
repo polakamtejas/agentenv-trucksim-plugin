@@ -30,3 +30,32 @@ def test_a_site_carries_the_3d_player(tmp_path):
     for seat in "ABC":
         for model in ("semi", "reefer", "box", "van"):
             assert (tmp_path / "models" / f"{model}-{seat}.glb").read_bytes()[:4] == b"glTF"
+
+
+def test_setup_builds_from_the_commit_a_git_install_came_from(tmp_path, monkeypatch):
+    """`agent-env trucksim setup` with no checkout around (a `uv tool install ... @ git+...@vX`, as the dataset card
+    has it) builds from the repo at the commit it was installed from: Docker fetches that commit itself."""
+    import click
+    import pytest
+    from agentenv_trucksim import cli
+
+    monkeypatch.chdir(tmp_path)                                            # no checkout in the cwd
+    monkeypatch.setattr(cli, "__file__", str(tmp_path / "site-packages" / "agentenv_trucksim" / "cli.py"))  # nor around the package
+    monkeypatch.setattr(cli, "_installed_commit", lambda: "f331079")
+    root = cli._checkout(None)
+    assert root == "https://github.com/polakamtejas/agentenv-trucksim-plugin.git#f331079"
+    assert cli._context(root) == root
+    assert cli._context(root, "agents/trucksim-llm") == f"{root}:agents/trucksim-llm"
+
+    monkeypatch.setattr(cli, "_installed_commit", lambda: None)            # a wheel or sdist: nothing to fetch
+    with pytest.raises(click.UsageError, match="pass --source"):
+        cli._checkout(None)
+    with pytest.raises(click.UsageError, match="is not a checkout"):
+        cli._checkout(tmp_path)
+
+
+def test_setup_builds_from_a_checkout_first():
+    from agentenv_trucksim import cli
+
+    assert cli._checkout(ROOT) == str(ROOT)
+    assert cli._context(str(ROOT), "agents/trucksim-llm") == str(ROOT / "agents" / "trucksim-llm")
